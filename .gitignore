@@ -234,3 +234,46 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
+
+# Build Folder
+Build/*
+Build/ALL_BUILD.vcxproj
+Build/ALL_BUILD.vcxproj.filters
+Build/cmake_install.cmake
+Build/CMakeCache.txt
+Build/CMakeFiles/3.14.4/CMakeDetermineCompilerABI_C.bin
+Build/CMakeFiles/3.14.4/CMakeDetermineCompilerABI_CXX.bin
+Build/CMakeFiles/3.14.4/CompilerIdC/CompilerIdC.exe
+Build/CMakeFiles/3.14.4/CompilerIdCXX/CompilerIdCXX.exe
+Build/CMakeFiles/b4260aed91a526db7db8ceb5b49ca1de/generate.stamp.rule
+Build/CMakeFiles/feature_tests.bin
+Build/CMakeFiles/generate.stamp.depend
+Build/CMakeFiles/generate.stamp.list
+Build/CMakeFiles/TargetDirectories.txt
+Build/FinalProject.sln
+Build/FinalProject.vcxproj
+Build/FinalProject.vcxproj.filters
+Build/Source/cmake_install.cmake
+Build/Source/CMakeFiles/generate.stamp.depend
+Build/ZERO_CHECK.vcxproj
+Build/ZERO_CHECK.vcxproj.filters
+Build/ALL_BUILD.vcxproj
+Build/ALL_BUILD.vcxproj.filters
+Build/cmake_install.cmake
+Build/CMakeCache.txt
+Build/CMakeFiles/3.14.4/CMakeDetermineCompilerABI_C.bin
+Build/CMakeFiles/3.14.4/CMakeDetermineCompilerABI_CXX.bin
+Build/CMakeFiles/3.14.4/CompilerIdC/CompilerIdC.exe
+Build/CMakeFiles/3.14.4/CompilerIdCXX/CompilerIdCXX.exe
+Build/CMakeFiles/b4260aed91a526db7db8ceb5b49ca1de/generate.stamp.rule
+Build/CMakeFiles/feature_tests.bin
+Build/CMakeFiles/generate.stamp.depend
+Build/CMakeFiles/generate.stamp.list
+Build/CMakeFiles/TargetDirectories.txt
+Build/FinalProject.sln
+Build/FinalProject.vcxproj
+Build/FinalProject.vcxproj.filters
+Build/Source/cmake_install.cmake
+Build/Source/CMakeFiles/generate.stamp.depend
+Build/ZERO_CHECK.vcxproj
+Build/ZERO_CHECK.vcxproj.filters
