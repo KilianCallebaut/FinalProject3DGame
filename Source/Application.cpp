@@ -27,11 +27,10 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
 }
 
-class Application : KeyListener, MouseMoveListener, MouseClickListener
-{
+class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
-    void init()
-    {
+
+    void init() {
         window.setGlVersion(3, 3, true);
         window.create("Final Project", 1024, 1024);
 
@@ -39,14 +38,21 @@ public:
         window.addMouseMoveListener(this);
         window.addMouseClickListener(this);
 
-        try {
+		TCHAR NPath[MAX_PATH];
+		GetCurrentDirectory(MAX_PATH, NPath);
+
+		std::cout << NPath << std::endl;
+
+		
+
+		try {
             defaultShader.create();
-            defaultShader.addShader(VERTEX, "Resources/shader.vert");
-            defaultShader.addShader(FRAGMENT, "Resources/shader.frag");
+            defaultShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.vert");
+            defaultShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.frag");
             defaultShader.build();
 
             shadowShader.create();
-            shadowShader.addShader(VERTEX, "Resources/shadow.vert");
+            shadowShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shadow.vert");
             shadowShader.build();
 
             // Any new shaders can be added below in similar fashion
@@ -69,10 +75,13 @@ public:
 
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+		//Init models
+		tmp = loadModel("C:/users/Emiel/Develop/FinalProject3DGame/dragon.obj");
+
     }
 
-    void update()
-    {
+    void update() {
         // This is your game loop
         // Put your real-time logic and rendering in here
         while (!window.shouldClose())
@@ -83,6 +92,8 @@ public:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // ...
+			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+			drawModel(defaultShader, tmp, Vector3f());
 
             // Processes input and swaps the window buffer
             window.update();
@@ -92,38 +103,33 @@ public:
     // In here you can handle key presses
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
-    void onKeyPressed(int key, int mods)
-    {
+    void onKeyPressed(int key, int mods) {
         std::cout << "Key pressed: " << key << std::endl;
     }
 
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
-    void onKeyReleased(int key, int mods)
-    {
+    void onKeyReleased(int key, int mods) {
 
     }
 
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
-    void onMouseMove(float x, float y)
-    {
-        std::cout << "Mouse at position: " << x << " " << y << std::endl;
+    void onMouseMove(float x, float y) {
+       // std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
 
     // If one of the mouse buttons is pressed this function will be called
     // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
     // mods - Any modifier buttons pressed
-    void onMouseClicked(int button, int mods)
-    {
+    void onMouseClicked(int button, int mods) {
         std::cout << "Pressed button: " << button << std::endl;
     }
 
     // If one of the mouse buttons is released this function will be called
     // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
     // mods - Any modifier buttons pressed
-    void onMouseReleased(int button, int mods)
-    {
+    void onMouseReleased(int button, int mods) {
 
     }
 
@@ -137,7 +143,10 @@ private:
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
     Matrix4f viewMatrix;
+
+	Model tmp;
 };
+
 
 int main()
 {
