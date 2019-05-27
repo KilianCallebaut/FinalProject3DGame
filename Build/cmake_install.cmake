@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project
+# Install script for directory: C:/Users/mrKC1/Documents/GitHub/FinalProject3DGame
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,7 +34,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Build/Source/cmake_install.cmake")
+  include("C:/Users/mrKC1/Documents/GitHub/FinalProject3DGame/Build/Source/cmake_install.cmake")
 
 endif()
 
@@ -46,5 +46,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/Users/mrKC1/Documents/GitHub/FinalProject3DGame/Build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

@@ -1,33 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\Source\Application.cpp">
+    <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\Source\Model.cpp">
+    <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\Source\Image.cpp">
+    <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\Source\Model.h">
+    <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\Source\Image.h">
+    <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\mrKC1\Documents\TU Delft\3D Computer Graphics and Animation\IN4152 - Final Project\CMakeLists.txt" />
+    <CustomBuild Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{18A0650A-E8EF-3161-9795-806CE9DA315A}</UniqueIdentifier>
+      <UniqueIdentifier>{02D2CCB6-9B03-3515-8424-DF9294982E5A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{F66E5E7D-2AC9-3B6A-ABD5-370DB48BE858}</UniqueIdentifier>
+      <UniqueIdentifier>{55ED6254-4CA4-3753-B86C-06AB74406C05}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

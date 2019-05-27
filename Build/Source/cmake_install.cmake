@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Source
+# Install script for directory: C:/Users/mrKC1/Documents/GitHub/FinalProject3DGame/Source
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
