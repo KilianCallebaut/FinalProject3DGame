@@ -14,14 +14,19 @@
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
-void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1)
+void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1)
 {
     Matrix4f modelMatrix;
     modelMatrix.translate(position);
     modelMatrix.rotate(rotation);
     modelMatrix.scale(scale);
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform3f("lightPosition", lightPosition);
+	shader.uniform3f("lightColor", lightColor);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
+	shader.uniform1f("ks", model.ks);
+	shader.uniform3f("ka", model.ka);
+	shader.uniform3f("kd", model.kd);
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
@@ -38,18 +43,21 @@ public:
         window.addMouseMoveListener(this);
         window.addMouseClickListener(this);
 
-		TCHAR NPath[MAX_PATH];
-		GetCurrentDirectory(MAX_PATH, NPath);
-
-		std::cout << NPath << std::endl;
-
-		
+		// Light init pos.
+		lightPosition = Vector3f(1, 1, 1); //position it at  1 1 1
+		lightColor = Vector3f(1, 1, 1); //White
+			
 
 		try {
-            defaultShader.create();
-            defaultShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.vert");
-            defaultShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.frag");
-            defaultShader.build();
+            //defaultShader.create();
+            //defaultShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.vert");
+            //defaultShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.frag");
+            //defaultShader.build();
+
+			blinnPhong.create();
+			blinnPhong.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.vert");
+			blinnPhong.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.frag");
+			blinnPhong.build();
 
             shadowShader.create();
             shadowShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shadow.vert");
@@ -65,20 +73,21 @@ public:
 
         // Correspond the OpenGL texture units 0 and 1 with the
         // colorMap and shadowMap uniforms in the shader
-        defaultShader.bind();
-        defaultShader.uniform1i("colorMap", 0);
-        defaultShader.uniform1i("shadowMap", 1);
+		blinnPhong.bind();
+		blinnPhong.uniform1i("colorMap", 0);
+		blinnPhong.uniform1i("shadowMap", 1);
 
         // Upload the projection matrix once, if it doesn't change
         // during the game we don't need to reupload it
-        defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-
+		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
 		//Init models
 		tmp = loadModel("C:/users/Emiel/Develop/FinalProject3DGame/dragon.obj");
-
+		tmp.ka = Vector3f(0.1, 0, 0);
+		tmp.kd = Vector3f(0.5, 0, 0);
+		tmp.ks = 8.0f;
     }
 
     void update() {
@@ -86,14 +95,14 @@ public:
         // Put your real-time logic and rendering in here
         while (!window.shouldClose())
         {
-            defaultShader.bind();
+			blinnPhong.bind();
 
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // ...
-			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
-			drawModel(defaultShader, tmp, Vector3f());
+			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+			drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);
 
             // Processes input and swaps the window buffer
             window.update();
@@ -139,10 +148,14 @@ private:
     // Shader for default rendering and for depth rendering
     ShaderProgram defaultShader;
     ShaderProgram shadowShader;
+    ShaderProgram blinnPhong;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
     Matrix4f viewMatrix;
+
+	Vector3f lightPosition;
+	Vector3f lightColor;
 
 	Model tmp;
 };
