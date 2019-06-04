@@ -8,9 +8,23 @@
 #include <GDT/Vector3f.h>
 #include <GDT/Math.h>
 #include <GDT/OpenGL.h>
+#include <GLFW/glfw3.h>
 
 #include <vector>
 #include <iostream>
+#include <algorithm> 
+#include <cmath> 
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#ifdef _WIN32
+#include <io.h> 
+#define access    _access_s
+#else
+#include <unistd.h>
+#endif
+
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
@@ -20,7 +34,6 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
     modelMatrix.translate(position);
     modelMatrix.rotate(rotation);
     modelMatrix.scale(scale);
-
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
 	shader.uniform3f("lightPosition", lightPosition);
 	shader.uniform3f("lightColor", lightColor);
@@ -31,6 +44,29 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
+}
+
+// Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
+Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
+	Vector3f forward = normalize(target - camera);
+	Vector3f right = normalize(cross(forward, up));
+	up = cross(right, forward);
+
+	Matrix4f lookAtMatrix;
+	lookAtMatrix[0] = right.x; lookAtMatrix[4] = right.y; lookAtMatrix[8] = right.z;
+	lookAtMatrix[1] = up.x; lookAtMatrix[5] = up.y; lookAtMatrix[9] = up.z;
+	lookAtMatrix[2] = -forward.x; lookAtMatrix[6] = -forward.y; lookAtMatrix[10] = -forward.z;
+
+	Matrix4f translateMatrix;
+	translateMatrix[12] = -camera.x;
+	translateMatrix[13] = -camera.y;
+	translateMatrix[14] = -camera.z;
+
+	return lookAtMatrix * translateMatrix;
+}
+
+bool FileExists(const std::string & Filename) {
+	return access(Filename.c_str(), 0) == 0;
 }
 
 //function to draw coordinate axes.
@@ -58,7 +94,7 @@ public:
         window.addMouseClickListener(this);
 
 		// Light init pos.
-		lightPosition = Vector3f(1, 1, 1); //position it at  1 1 1
+		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
 		lightColor = Vector3f(1, 1, 1); //White
 			
 		setupCoordSystem();
@@ -86,21 +122,41 @@ public:
             std::cerr << e.what() << std::endl;
         }
 
+		// Orthographic
+		float znear = nn;
+		float zfar = ff;
+		std::cout << "near" << znear;
+		std::cout << "far" << zfar;
+
+		float aspect = (float)width / (float)height;
+
+		float top = 1.0f;
+		float bottom = -1.0f;
+		float right = top * aspect;
+		float left = bottom * aspect;
+
+		projMatrix[0] = 2.0f / (right - left);
+		projMatrix[3] = -((right + left) / (right - left));
+		projMatrix[5] = 2.0f / (top - bottom);
+		projMatrix[7] = -((top + bottom) / (top - bottom));
+		projMatrix[10] = -2.0f / (zfar - znear);
+		projMatrix[11] = -((zfar + znear) / (zfar - znear));
+		projMatrix[15] = 1.0f;
+
+		defaultShader.bind();
+		defaultShader.uniform1i("colorMap", 0);
+		defaultShader.uniform1i("shadowMap", 1);
+		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+
         // Correspond the OpenGL texture units 0 and 1 with the
         // colorMap and shadowMap uniforms in the shader
 		blinnPhong.bind();
 		blinnPhong.uniform1i("colorMap", 0);
 		blinnPhong.uniform1i("shadowMap", 1);		
-		
-		defaultShader.bind();
-		defaultShader.uniform1i("colorMap", 0);
-		defaultShader.uniform1i("shadowMap", 1);
-
 
         // Upload the projection matrix once, if it doesn't change
         // during the game we don't need to reupload it
 		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
-		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
@@ -117,6 +173,7 @@ public:
         while (!window.shouldClose()) {
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			viewMatrix.translate(Vector3f(side, 0, forward));
 
             // ...
 			blinnPhong.bind();
@@ -172,10 +229,32 @@ public:
     void onKeyPressed(int key, int mods) {
 		std::cout << "Key pressed: " << key << std::endl;
 		switch (key) {
-			case 67: // c
+		case GLFW_KEY_W:
+			forward -= step;
+			break;
+		case GLFW_KEY_S:
+			forward += step;
+			break;
+		case GLFW_KEY_A:
+			side -= step;
+			break;
+		case GLFW_KEY_D:
+			side += step;
+			break;
+		case GLFW_KEY_R:
+			nn -= 1.0f;
+			break;
+		case GLFW_KEY_F:
+			nn += 1.0f;
+			break;
+		case GLFW_KEY_T:
+			ff -= 1.0f;
+			break;
+		case GLFW_KEY_G:
+			ff += 1.0f;
+			break;
+		case GLFW_KEY_C:
 				showCoord = !showCoord;
-				break;
-			default:
 				break;
 		}
     }
@@ -184,7 +263,22 @@ public:
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
     void onKeyReleased(int key, int mods) {
+		float step = 0.01f;
+		switch (key) {
+		case GLFW_KEY_W:
+			forward += step;
+			break;
+		case GLFW_KEY_S:
+			forward -= step;
+			break;
+		case GLFW_KEY_A:
+			side += step;
+			break;
+		case GLFW_KEY_D:
+			side -= step;
+			break;
 
+		}
     }
 
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
@@ -224,7 +318,17 @@ private:
 	unsigned int coordVAO;
 	unsigned int coordVBO;
 
-	bool showCoord = true;
+	bool showCoord = 1;
+
+	float forward = 0;
+	float side = 0;
+
+	uint width;
+	uint height;
+
+	float nn = 1.0f;
+	float ff = 10.0f;	
+	float step = 0.01f;
 
 	Model tmp;
 };
