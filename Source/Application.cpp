@@ -24,6 +24,7 @@
 #else
 #include <unistd.h>
 #endif
+#include <ctime>
 
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
@@ -96,7 +97,8 @@ public:
 		// Light init pos.
 		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
 		lightColor = Vector3f(1, 1, 1); //White
-			
+		
+		//Coordsystem if you want
 		setupCoordSystem();
 
 		try {
@@ -121,12 +123,12 @@ public:
         {
             std::cerr << e.what() << std::endl;
         }
-
+		std::cout << "test" << std::endl;
 		// Orthographic
 		float znear = nn;
 		float zfar = ff;
-		std::cout << "near" << znear;
-		std::cout << "far" << zfar;
+		std::cout << "near " << znear << std::endl;
+		std::cout << "far " << zfar << std::endl;
 
 		float aspect = (float)width / (float)height;
 
@@ -178,6 +180,7 @@ public:
             // ...
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+			blinnPhong.uniform1f("time", glfwGetTime());
 			drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);			
 			
 			if (showCoord) {
@@ -256,6 +259,10 @@ public:
 		case GLFW_KEY_C:
 				showCoord = !showCoord;
 				break;
+		case GLFW_KEY_1:
+			//lookAtMatrix();
+			break;
+
 		}
     }
 
@@ -318,7 +325,7 @@ private:
 	unsigned int coordVAO;
 	unsigned int coordVBO;
 
-	bool showCoord = 1;
+	bool showCoord = 0;
 
 	float forward = 0;
 	float side = 0;
