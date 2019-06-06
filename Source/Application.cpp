@@ -164,7 +164,7 @@ public:
 
 		//Init models
 		
-		tmp = loadModel("Resources//dragon.obj");
+		tmp = loadModel("Resources//77613_Simple_Character__rigged_//shadowman.obj");
 
 	}
 
@@ -183,10 +183,12 @@ public:
 
 			defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
-			viewMatrix.translate(Vector3f(side, 0, forward));
+			viewMatrix.translate(Vector3f(side, up, forward));
 			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+
 			
 			drawModel(defaultShader, tmp, Vector3f());
+			/*
 			drawModel(defaultShader, tmp, Vector3f(1.0f, 0, 0));
 			drawModel(defaultShader, tmp, Vector3f(-1.0f, 0, 0));
 			drawModel(defaultShader, tmp, Vector3f(0, 1.0f, 0));
@@ -197,7 +199,7 @@ public:
 			for (float i = 0; i < 100.0f; i++) {
 				drawModel(defaultShader, tmp, Vector3f(0, 0, i));
 			}
-			
+			*/
 			// Processes input and swaps the window buffer
 			window.update();
 		}
@@ -224,10 +226,10 @@ public:
 		case GLFW_KEY_D:
 			side += step;
 			break;
-		case GLFW_KEY_R:
+		case GLFW_KEY_Y:
 			nn -= 1.0f;
 			break;
-		case GLFW_KEY_F:
+		case GLFW_KEY_H:
 			nn += 1.0f;
 			break;
 		case GLFW_KEY_T:
@@ -235,6 +237,12 @@ public:
 			break;
 		case GLFW_KEY_G:
 			ff += 1.0f;
+			break;
+		case GLFW_KEY_R:
+			up += step;
+			break;
+		case GLFW_KEY_F:
+			up -= step;
 			break;
 		}
     }
@@ -258,7 +266,12 @@ public:
 		case GLFW_KEY_D:
 			side -= step;
 			break;
-		
+		case GLFW_KEY_R:
+			up -= step;
+			break;
+		case GLFW_KEY_F:
+			up += step;
+			break;
 		}
     }
 
@@ -299,6 +312,7 @@ private:
 	Model tmp;
 	float forward = 0;
 	float side = 0;
+	float up = 0;
 	
 	uint width;
 	uint height;
