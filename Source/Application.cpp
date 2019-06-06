@@ -12,14 +12,14 @@
 
 #include <vector>
 #include <iostream>
-#include <algorithm> 
-#include <cmath> 
+#include <algorithm>
+#include <cmath>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 #ifdef _WIN32
-#include <io.h> 
+#include <io.h>
 #define access    _access_s
 #else
 #include <unistd.h>
@@ -28,22 +28,26 @@
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
-void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f rotation = Vector3f(0), float scale = 1)
+void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1)
 {
     Matrix4f modelMatrix;
     modelMatrix.translate(position);
     modelMatrix.rotate(rotation);
     modelMatrix.scale(scale);
     shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform3f("lightPosition", lightPosition);
+	shader.uniform3f("lightColor", lightColor);
     shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
+	shader.uniform1f("ks", model.ks);
+	shader.uniform3f("ka", model.ka);
+	shader.uniform3f("kd", model.kd);
 
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
 }
 
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
-Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up)
-{
+Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
 	Vector3f forward = normalize(target - camera);
 	Vector3f right = normalize(cross(forward, up));
 	up = cross(right, forward);
@@ -61,158 +65,170 @@ Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up)
 	return lookAtMatrix * translateMatrix;
 }
 
-bool FileExists(const std::string &Filename)
-{
+bool FileExists(const std::string & Filename) {
 	return access(Filename.c_str(), 0) == 0;
 }
 
+//function to draw coordinate axes.
+void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
 
-class Application : KeyListener, MouseMoveListener, MouseClickListener
-{
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_LINES,6, GL_UNSIGNED_INT,0);
+	glBindVertexArray(0);
+}
+
+class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
-	void init() {
-		width = window.getWidth();
-		height = window.getHeight();
 
-		window.setGlVersion(3, 3, true);
-		window.create("Final Project", width, height);
+    void init() {
+        width = window.getWidth();
+    		height = window.getHeight();
+        window.setGlVersion(3, 3, true);
+        window.create("Final Project", 1024, 1024);
 
-		window.addKeyListener(this);
-		window.addMouseMoveListener(this);
-		window.addMouseClickListener(this);
+        window.addKeyListener(this);
+        window.addMouseMoveListener(this);
+        window.addMouseClickListener(this);
 
-		TCHAR NPath[MAX_PATH];
-		GetCurrentDirectory(MAX_PATH, NPath);
+    		// Light init pos.
+    		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
+    		lightColor = Vector3f(1, 1, 1); //White
 
-		std::cout << NPath << std::endl;
+    		setupCoordSystem();
 
+    		try {
+                defaultShader.create();
+                defaultShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.vert");
+                defaultShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.frag");
+                defaultShader.build();
 
+          			blinnPhong.create();
+          			blinnPhong.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.vert");
+          			blinnPhong.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.frag");
+          			blinnPhong.build();
 
-		try {
-			defaultShader.create();
-			defaultShader.addShader(VERTEX, "Resources//shader.vert");
-			defaultShader.addShader(FRAGMENT, "Resources//shader.frag");
-			defaultShader.build();
+                shadowShader.create();
+                shadowShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shadow.vert");
+                shadowShader.build();
 
-			shadowShader.create();
-			shadowShader.addShader(VERTEX, "Resources//shadow.vert");
-			shadowShader.build();
+                // Any new shaders can be added below in similar fashion
+                // ....
+        }
+        catch (ShaderLoadingException e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
 
-			// Any new shaders can be added below in similar fashion
-			// ....
-		}
-		catch (ShaderLoadingException e)
-		{
-			std::cerr << e.what() << std::endl;
-		}
+        viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, -3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
+    		// Orthographic
+    		float znear = nn;
+    		float zfar = ff;
+    		std::cout << "near" << znear;
+    		std::cout << "far" << zfar;
 
-		// Correspond the OpenGL texture units 0 and 1 with the
-		// colorMap and shadowMap uniforms in the shader
-		defaultShader.bind();
-		defaultShader.uniform1i("colorMap", 0);
-		defaultShader.uniform1i("shadowMap", 1);
+    		float aspect = (float)width / (float)height;
 
-		// Upload the projection matrix once, if it doesn't change
-		// during the game we don't need to reupload it
-		
-		// Perspective
-		/*
-		float znear = 1.0f;
-		float zfar = 100.0f;
-		float fov = 110 * (M_PI/180);
-		float aspect = (float)width / (float)height;
-		
-		
-		projMatrix[0] = 1.0f / (aspect*tan(fov / 2.0f));
-		projMatrix[5] = 1.0f / tan(fov / 2.0f);
-		projMatrix[10] = -((zfar + znear) / (zfar - znear));
-		projMatrix[11] = -((2 * zfar*znear) / (zfar - znear));
-		projMatrix[14] = -1.0f;
-		*/
+    		float top = 1.0f;
+    		float bottom = -1.0f;
+    		float right = top * aspect;
+    		float left = bottom * aspect;
 
-		// Orthographic
-		float znear = nn;
-		float zfar = ff;
-		std::cout << "near" << znear;
-		std::cout << "far" << zfar;
-		
-		float aspect = (float)width / (float)height;
+    		projMatrix[0] = 2.0f / (right - left);
+    		projMatrix[3] = -((right + left) / (right - left));
+    		projMatrix[5] = 2.0f / (top - bottom);
+    		projMatrix[7] = -((top + bottom) / (top - bottom));
+    		projMatrix[10] = -2.0f / (zfar - znear);
+    		projMatrix[11] = -((zfar + znear) / (zfar - znear));
+    		projMatrix[15] = 1.0f;
 
-		float top = 1.0f;
-		float bottom = -1.0f;
-		float right = top * aspect;
-		float left = bottom * aspect;
+    		defaultShader.bind();
+    		defaultShader.uniform1i("colorMap", 0);
+    		defaultShader.uniform1i("shadowMap", 1);
+    		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
-		projMatrix[0] = 2.0f / (right - left);
-		projMatrix[3] = -((right + left) / (right - left));
-		projMatrix[5] = 2.0f/(top-bottom);
-		projMatrix[7] = -((top + bottom) / (top - bottom));
-		projMatrix[10] = -2.0f/(zfar-znear);
-		projMatrix[11] = -((zfar+znear)/(zfar-znear));
-		projMatrix[15] = 1.0f;
+            // Correspond the OpenGL texture units 0 and 1 with the
+            // colorMap and shadowMap uniforms in the shader
+    		blinnPhong.bind();
+    		blinnPhong.uniform1i("colorMap", 0);
+    		blinnPhong.uniform1i("shadowMap", 1);
 
-		
+            // Upload the projection matrix once, if it doesn't change
+            // during the game we don't need to reupload it
+    		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
+            glEnable(GL_DEPTH_TEST);
+            glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
-		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-		
-		viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, -3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
-		defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+    		//Init models
+    		tmp = loadModel("C:/users/Emiel/Develop/FinalProject3DGame/dragon.obj");
+    		tmp.ka = Vector3f(0.1, 0, 0);
+    		tmp.kd = Vector3f(0.5, 0, 0);
+    		tmp.ks = 8.0f;
+    }
 
+    void update() {
+        // This is your game loop
+        // Put your real-time logic and rendering in here
+        while (!window.shouldClose()) {
+            // Clear the screen
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+            viewMatrix.translate(Vector3f(side, up, forward));
+                  // ...
+      			blinnPhong.bind();
+      			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+      			drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);
 
-		//Init models
-		
-		tmp = loadModel("Resources//77613_Simple_Character__rigged_//shadowman.obj");
+      			if (showCoord) {
+      				defaultShader.bind();
+      				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+      				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
+      			}
 
+            window.update();
+          }
+        }
+
+	// Setup a coordinate system
+	void setupCoordSystem() {
+		//Coordsystem lines.
+		Vector3f coords[] = {
+			Vector3f(0,0,0),
+			Vector3f(1,0,0),
+			Vector3f(0,1,0),
+			Vector3f(0,0,1)
+		};
+		unsigned int indices[] = {
+			0, 1, // x
+			0, 2, // y
+			0, 3  // z
+		};
+
+		unsigned int EBO;
+		glGenBuffers(1, &EBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+		glGenVertexArrays(1, &coordVAO);
+		glGenBuffers(1, &coordVBO);
+
+		glBindVertexArray(coordVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, coordVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(coords) * sizeof(Vector3f), coords, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
 	}
 
-	void update() {
-		// This is your game loop
-		// Put your real-time logic and rendering in here
-		while (!window.shouldClose())
-		{
-			
-
-			defaultShader.bind();
-
-			// Clear the screen
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-			defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-
-			viewMatrix.translate(Vector3f(side, up, forward));
-			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
-
-			
-			drawModel(defaultShader, tmp, Vector3f());
-			/*
-			drawModel(defaultShader, tmp, Vector3f(1.0f, 0, 0));
-			drawModel(defaultShader, tmp, Vector3f(-1.0f, 0, 0));
-			drawModel(defaultShader, tmp, Vector3f(0, 1.0f, 0));
-			drawModel(defaultShader, tmp, Vector3f(0, -1.0f, 0));
-			drawModel(defaultShader, tmp, Vector3f(0, 0, 1.0f));
-			drawModel(defaultShader, tmp, Vector3f(0, 0, -1.0f));
-		
-			for (float i = 0; i < 100.0f; i++) {
-				drawModel(defaultShader, tmp, Vector3f(0, 0, i));
-			}
-			*/
-			// Processes input and swaps the window buffer
-			window.update();
-		}
-	}
-
-	
     // In here you can handle key presses
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
-    void onKeyPressed(int key, int mods)
-    {
-        std::cout << "Key pressed: " << key << std::endl;
-		float step = 0.01f;
+    void onKeyPressed(int key, int mods) {
+		std::cout << "Key pressed: " << key << std::endl;
 		switch (key) {
 		case GLFW_KEY_W:
 			forward -= step;
@@ -250,6 +266,7 @@ public:
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
     // mods - Any modifier keys pressed, like shift or control
+
     void onKeyReleased(int key, int mods)
     {
 		float step = 0.01f;
@@ -276,25 +293,22 @@ public:
     }
 
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
-    void onMouseMove(float x, float y)
-    {
-        std::cout << "Mouse at position: " << x << " " << y << std::endl;
+    void onMouseMove(float x, float y) {
+       // std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
 
     // If one of the mouse buttons is pressed this function will be called
     // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
     // mods - Any modifier buttons pressed
-    void onMouseClicked(int button, int mods)
-    {
+    void onMouseClicked(int button, int mods) {
         std::cout << "Pressed button: " << button << std::endl;
-		
+
     }
 
     // If one of the mouse buttons is released this function will be called
     // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
     // mods - Any modifier buttons pressed
-    void onMouseReleased(int button, int mods)
-    {
+    void onMouseReleased(int button, int mods) {
 
     }
 
@@ -304,22 +318,34 @@ private:
     // Shader for default rendering and for depth rendering
     ShaderProgram defaultShader;
     ShaderProgram shadowShader;
+    ShaderProgram blinnPhong;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
     Matrix4f viewMatrix;
 
-	Model tmp;
+	Vector3f lightPosition;
+	Vector3f lightColor;
+
+	unsigned int coordVAO;
+	unsigned int coordVBO;
+
+	bool showCoord = 1;
+
 	float forward = 0;
 	float side = 0;
-	float up = 0;
-	
+  float up = 0;
+
 	uint width;
 	uint height;
 
 	float nn = 1.0f;
 	float ff = 10.0f;
+	float step = 0.01f;
+
+	Model tmp;
 };
+
 
 int main()
 {
