@@ -103,17 +103,17 @@ public:
 
     		try {
                 defaultShader.create();
-                defaultShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.vert");
-                defaultShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shader.frag");
+                defaultShader.addShader(VERTEX, "Resources//shader.vert");
+                defaultShader.addShader(FRAGMENT, "Resources//shader.frag");
                 defaultShader.build();
 
           			blinnPhong.create();
-          			blinnPhong.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.vert");
-          			blinnPhong.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.frag");
+          			blinnPhong.addShader(VERTEX, "Resources//blinnphong.vert");
+          			blinnPhong.addShader(FRAGMENT, "Resources//blinnphong.frag");
           			blinnPhong.build();
 
                 shadowShader.create();
-                shadowShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shadow.vert");
+                shadowShader.addShader(VERTEX, "Resources//shadow.vert");
                 shadowShader.build();
 
                 // Any new shaders can be added below in similar fashion
@@ -164,7 +164,7 @@ public:
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
     		//Init models
-    		tmp = loadModel("C:/users/Emiel/Develop/FinalProject3DGame/dragon.obj");
+    		tmp = loadModel("Resources\\dragon.obj");
     		tmp.ka = Vector3f(0.1, 0, 0);
     		tmp.kd = Vector3f(0.5, 0, 0);
     		tmp.ks = 8.0f;
