@@ -1,5 +1,6 @@
 #include "Model.h"
 #include "Image.h"
+#include "Terrain.h"
 
 #include <GDT/Window.h>
 #include <GDT/Input.h>
@@ -66,22 +67,33 @@ Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
 	return lookAtMatrix * translateMatrix;
 }
 
+//Check if a file exists
 bool FileExists(const std::string & Filename) {
 	return access(Filename.c_str(), 0) == 0;
 }
 
-//function to draw coordinate axes.
-void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
-	
+//Draw the surface
+void drawSurface(ShaderProgram& shader, const Terrain& terrain, Vector3f position ) {
 	Matrix4f modelMatrix;
 	modelMatrix.translate(position);
-	
-	shader.uniformMatrix4f("modelMatrix", modelMatrix);
 
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	glBindVertexArray(terrain.vao);
+	glDrawElements(GL_TRIANGLES, terrain.indices.size(), GL_UNSIGNED_INT, 0);
+}
+
+//function to draw coordinate axes.
+void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
 	glBindVertexArray(vao);
 	glDrawElements(GL_LINES,6, GL_UNSIGNED_INT,0);
 	glBindVertexArray(0);
 }
+
+
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
@@ -95,9 +107,12 @@ public:
         window.addMouseClickListener(this);
 
 		// Light init pos.
-		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
+		lightPosition = Vector3f(1, 1, 1); //position it at  1 1 1
 		lightColor = Vector3f(1, 1, 1); //White
 		
+		//Init surface
+		terrain = initializeTerrain();
+
 		//Coordsystem if you want
 		setupCoordSystem();
 
@@ -111,6 +126,11 @@ public:
 			blinnPhong.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.vert");
 			blinnPhong.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/blinnphong.frag");
 			blinnPhong.build();
+			
+			terrainShader.create();
+			terrainShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/terrain.vert");
+			terrainShader.addShader(FRAGMENT, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/terrain.frag");
+			terrainShader.build();
 
             shadowShader.create();
             shadowShader.addShader(VERTEX, "C:/users/Emiel/Develop/FinalProject3DGame/Resources/shadow.vert");
@@ -123,7 +143,8 @@ public:
         {
             std::cerr << e.what() << std::endl;
         }
-		std::cout << "test" << std::endl;
+
+		viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, -3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
 		// Orthographic
 		float znear = nn;
 		float zfar = ff;
@@ -150,6 +171,11 @@ public:
 		defaultShader.uniform1i("shadowMap", 1);
 		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
+		terrainShader.bind();
+		terrainShader.uniform1i("colorMap", 0);
+		terrainShader.uniform1i("shadowMap", 1);
+		terrainShader.uniformMatrix4f("projMatrix", projMatrix);
+
         // Correspond the OpenGL texture units 0 and 1 with the
         // colorMap and shadowMap uniforms in the shader
 		blinnPhong.bind();
@@ -172,11 +198,19 @@ public:
     void update() {
         // This is your game loop
         // Put your real-time logic and rendering in here
+		
+
         while (!window.shouldClose()) {
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			viewMatrix.translate(Vector3f(side, 0, forward));
 
+			if (drawterrain) {
+				//std::cout << "????";
+				terrainShader.bind();
+				terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
+				drawSurface(terrainShader, terrain, Vector3f(0, 0, 0));
+			}
             // ...
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -210,16 +244,16 @@ public:
 			0, 3  // z
 		};
 
-		unsigned int EBO;
+		GLuint EBO;
+		GLuint coordVBO;
 		glGenBuffers(1, &EBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
 		glGenVertexArrays(1, &coordVAO);
 		glGenBuffers(1, &coordVBO);
 
 		glBindVertexArray(coordVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, coordVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(coords) * sizeof(Vector3f), coords, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3f), coords, GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -258,6 +292,9 @@ public:
 			break;
 		case GLFW_KEY_C:
 				showCoord = !showCoord;
+				break;
+		case GLFW_KEY_V:
+				drawterrain = !drawterrain;
 				break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
@@ -314,29 +351,47 @@ private:
     ShaderProgram defaultShader;
     ShaderProgram shadowShader;
     ShaderProgram blinnPhong;
+    ShaderProgram terrainShader;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
     Matrix4f viewMatrix;
 
+	//Only use this if one static light.
 	Vector3f lightPosition;
 	Vector3f lightColor;
 
+	//Coordinate system stuff
 	unsigned int coordVAO;
-	unsigned int coordVBO;
-
 	bool showCoord = 0;
 
+	//Projection stuff
 	float forward = 0;
 	float side = 0;
-
 	uint width;
 	uint height;
-
 	float nn = 1.0f;
 	float ff = 10.0f;	
 	float step = 0.01f;
 
+	//Vertices and texture coordinates for the terrain/water
+	int NbVertX = 2, NbVertY = 2;
+	//vertices
+	std::vector<float> SurfaceVertices3f;
+	//normals
+	std::vector<float> SurfaceNormals3f;
+	//colors
+	std::vector<float> SurfaceColors3f;
+	//tex coords
+	std::vector<float> SurfaceTexCoords2f;
+	//triangle indices (three successive entries: n1, n2, n3 represent a triangle, each n* is an index representing a vertex.)
+	std::vector<unsigned int> SurfaceTriangles3ui;
+	GLuint terrainVAO;
+
+	Terrain terrain;
+	bool drawterrain = 0;
+
+	//Models
 	Model tmp;
 };
 

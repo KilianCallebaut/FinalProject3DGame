@@ -6,5 +6,7 @@ set(SOURCE_FILES
     ${DIR}/Model.cpp
     ${DIR}/Image.h
     ${DIR}/Image.cpp
+	${DIR}/Terrain.h
+	${DIR}/Terrain.cpp
     PARENT_SCOPE
 )
