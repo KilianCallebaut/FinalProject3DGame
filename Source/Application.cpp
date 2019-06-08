@@ -209,17 +209,19 @@ public:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			viewMatrix.translate(Vector3f(side, 0, forward));
 
-			if (!drawterrain) {
+			if (drawterrain) {
 				terrainShader.bind();
 				terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawSurface(terrainShader, terrain, rockyTerrain, Vector3f(0, 0, 0));
 			}
             // ...
-			blinnPhong.bind();
-			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
-			blinnPhong.uniform1f("time", glfwGetTime());
-			drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);			
-			
+			if (drawTestModel) {
+				blinnPhong.bind();
+				blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+				blinnPhong.uniform1f("time", glfwGetTime());
+				drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);
+			}
+
 			if (showCoord) {
 				defaultShader.bind();
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -298,6 +300,9 @@ public:
 				break;
 		case GLFW_KEY_V:
 				drawterrain = !drawterrain;
+				break;		
+		case GLFW_KEY_B:
+				drawTestModel = !drawTestModel;
 				break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
@@ -393,13 +398,14 @@ private:
 
 	//Terrain
 	Terrain terrain;
-	bool drawterrain = 1;
+	bool drawterrain = 0;
 
 	//Images
 	Image rockyTerrain;
 
 	//Models
 	Model tmp;
+	bool drawTestModel = 0;
 };
 
 

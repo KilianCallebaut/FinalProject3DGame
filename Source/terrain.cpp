@@ -1,26 +1,30 @@
+#define _USE_MATH_DEFINES
+
 #include "Terrain.h"
 #include <stdlib.h>
 #include <ctime>
+#include <math.h>
+
 
 Terrain initializeTerrain() {
 	Terrain terrain;
 
-	terrain.seed = std::time(nullptr);
-	terrain.size = 5; //Length of the terrain
-	terrain.vertexCount = 16; //Number of vertices in one direction (x or z)
+	terrain.seed = std::time(nullptr); //Seed for height generation
+	terrain.size = 800; //Length of the terrain
+	terrain.vertexCount = 128; //Number of vertices in one direction (x or z)
+	terrain.maxHeight = 2.0f; //Maximum height
+	terrain.interpolationSteps = 3;
+	terrain.roughness = 0.3f;
 
 	int count = terrain.vertexCount * terrain.vertexCount;
 	for (int i = 0; i < terrain.vertexCount; i++) {
 		for (int j = 0; j < terrain.vertexCount; j++) {
 			float x_coord = (float)j / ((float)terrain.vertexCount - 1) * terrain.size;
-			float y_coord = 0;//generateHeight(j, i, terrain.seed) * 5;
+			float y_coord = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight) * terrain.maxHeight;
 			float z_coord = (float)i / ((float)terrain.vertexCount - 1) * terrain.size;
 			terrain.vertices.push_back(Vector3f(x_coord, y_coord, z_coord));
 
-			float x_normal = 0;
-			float y_normal = 1;
-			float z_normal = 0;
-			terrain.normals.push_back(Vector3f(x_normal, y_normal, z_normal));
+			terrain.normals.push_back(calculateNormal(j,i,terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight));
 
 			float r = j % 2;
 			float g = 0;
@@ -90,8 +94,59 @@ Terrain initializeTerrain() {
 	return terrain;
 }
 
-// Height generator
-float generateHeight(int x, int z, int seed) {
-	srand(seed + x *21421 + z * 8953);
+Vector3f calculateNormal(int x, int z, int seed, int interpolationSteps, float roughness, float maxHeight) {
+	float heightLeft = generateHeight(x-1, z, seed, interpolationSteps, roughness, maxHeight);
+	float heightRight = generateHeight(x+1, z, seed, interpolationSteps, roughness, maxHeight);
+	float heightDown = generateHeight(x, z-1, seed, interpolationSteps, roughness, maxHeight);
+	float heightUp = generateHeight(x, z+1, seed, interpolationSteps, roughness, maxHeight);
+	return Vector3f(heightLeft-heightRight, 2.0f, heightDown - heightUp).normalize();
+}
+
+// Height generator. Loop interpolationSteps times and add it toghether. Each time the results counts less. The more loops the more smooth, but too much might become unrealistic
+float generateHeight(int x, int z, int seed, int interpolationSteps, float roughness, float maxHeight) {
+	float result = 0.0f;
+	float d = (float)pow(2, interpolationSteps)-1;
+	for (int i = 0; i < roughness; i++) {
+		float f = (float)(pow(2, i) / d);
+		float amp = (float)pow(roughness, i) * maxHeight;
+		result += getInterpolatedNoise(x,z,seed)*amp;
+	}
+	return result;
+}
+
+//Smoothen the terrain regarding their neighbours and return an avarage value
+float getSmoothNoise(int x, int z, int seed) {
+	float corners = (getNoise(x-1, z-1, seed) + getNoise(x+1, z-1, seed) + getNoise(x-1, z+1, seed) + getNoise(x+1, z+1, seed)) / 16.0f;
+	float sides = (getNoise(x-1, z, seed) + getNoise(x+1, z, seed) + getNoise(x, z-1, seed) + getNoise(x, z+1, seed)) / 8.0f;
+	float center = getNoise(x, z, seed) / 4.0f;
+	return corners + sides + corners;
+}
+
+//Get a random height value
+float getNoise(int x, int z, int seed) {
+	srand(seed + x * 21421 + z * 8953); //Multiplied by a random big number, because seeds with values close to each other tend to have almost the same result with the random generator.
 	return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);;
+}
+
+//Get the interpolated noise values for a more smooth terrain.
+float getInterpolatedNoise(float x, float z, int seed) {
+	int intValueX = (int)x;
+	int intValueZ = (int)z;
+	float decimalValueX = x - intValueX;
+	float decimalValueZ = z - intValueZ;
+
+	float p1 = getSmoothNoise(intValueX, intValueZ, seed);
+	float p2 = getSmoothNoise(intValueX + 1, intValueZ, seed);
+	float p3 = getSmoothNoise(intValueX, intValueZ + 1, seed);
+	float p4 = getSmoothNoise(intValueX + 1, intValueZ + 1, seed);
+	float interpolatedValue1 = interpolate(p1, p2, decimalValueX);
+	float interpolatedValue2 = interpolate(p3, p4, decimalValueZ);
+	return interpolate(interpolatedValue1, interpolatedValue2, decimalValueX);
+}
+
+// Cosinus interpolation of the height gives a more smooth and natural feeling of the terrain.
+float interpolate(float a, float b, float blend) {
+	double theta = blend * M_PI;
+	float func = (float)(1.0f - cos(theta)) * 0.5f;
+	return a * (1.0f - func) + b * func;
 }
