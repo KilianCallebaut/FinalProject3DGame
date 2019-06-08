@@ -1,6 +1,7 @@
 #include "Model.h"
 #include "Image.h"
 #include "Terrain.h"
+#include <stb_image.h>
 
 #include <GDT/Window.h>
 #include <GDT/Input.h>
@@ -73,12 +74,16 @@ bool FileExists(const std::string & Filename) {
 }
 
 //Draw the surface
-void drawSurface(ShaderProgram& shader, const Terrain& terrain, Vector3f position ) {
+void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vector3f position ) {
 	Matrix4f modelMatrix;
 	modelMatrix.translate(position);
 
 	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, image.handle);
 	glBindVertexArray(terrain.vao);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, terrain.indices.size(), GL_UNSIGNED_INT, 0);
 }
 
@@ -111,6 +116,7 @@ public:
 		lightColor = Vector3f(1, 1, 1); //White
 		
 		//Init surface
+		rockyTerrain = loadImage("C:/users/Emiel/Develop/FinalProject3DGame/Resources/rockyTerrain.jpg");
 		terrain = initializeTerrain();
 
 		//Coordsystem if you want
@@ -148,8 +154,6 @@ public:
 		// Orthographic
 		float znear = nn;
 		float zfar = ff;
-		std::cout << "near " << znear << std::endl;
-		std::cout << "far " << zfar << std::endl;
 
 		float aspect = (float)width / (float)height;
 
@@ -205,11 +209,10 @@ public:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			viewMatrix.translate(Vector3f(side, 0, forward));
 
-			if (drawterrain) {
-				//std::cout << "????";
+			if (!drawterrain) {
 				terrainShader.bind();
 				terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
-				drawSurface(terrainShader, terrain, Vector3f(0, 0, 0));
+				drawSurface(terrainShader, terrain, rockyTerrain, Vector3f(0, 0, 0));
 			}
             // ...
 			blinnPhong.bind();
@@ -234,9 +237,9 @@ public:
 		//Coordsystem lines.
 		Vector3f coords[] = {
 			Vector3f(0,0,0),
-			Vector3f(1,0,0),
-			Vector3f(0,1,0),
-			Vector3f(0,0,1)
+			Vector3f(5,0,0),
+			Vector3f(0,5,0),
+			Vector3f(0,0,5)
 		};
 		unsigned int indices[] = {
 			0, 1, // x
@@ -388,8 +391,12 @@ private:
 	std::vector<unsigned int> SurfaceTriangles3ui;
 	GLuint terrainVAO;
 
+	//Terrain
 	Terrain terrain;
-	bool drawterrain = 0;
+	bool drawterrain = 1;
+
+	//Images
+	Image rockyTerrain;
 
 	//Models
 	Model tmp;

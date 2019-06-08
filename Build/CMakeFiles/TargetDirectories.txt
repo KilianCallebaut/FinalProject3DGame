@@ -1,3 +1,0 @@
-C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Build/CMakeFiles/FinalProject.dir
-C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Build/CMakeFiles/ALL_BUILD.dir
-C:/Users/mrKC1/Documents/TU Delft/3D Computer Graphics and Animation/IN4152 - Final Project/Build/CMakeFiles/ZERO_CHECK.dir

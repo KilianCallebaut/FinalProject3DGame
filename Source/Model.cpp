@@ -102,5 +102,7 @@ Model loadModel(std::string path)
         glEnableVertexAttribArray(2);
     }
 
+	std::cout << model.vertices.size() << std::endl;
+
     return model;
 }

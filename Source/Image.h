@@ -6,7 +6,7 @@ class Image
 {
 public:
     int width, height;
-    unsigned char* data;
+    unsigned char *data;
 
     unsigned int handle;
 };
