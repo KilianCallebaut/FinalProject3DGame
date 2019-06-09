@@ -1,6 +1,7 @@
 #include "Model.h"
 #include "Image.h"
 
+
 #include <GDT/Window.h>
 #include <GDT/Input.h>
 #include <GDT/Shader.h>
@@ -24,6 +25,88 @@
 #else
 #include <unistd.h>
 #endif
+
+class Character
+{
+public:
+	Model characterModel;
+	Model runFrames[24];
+	Vector3f position;
+	Vector3f rotation;
+	Vector3f direction = Vector3f(0,0,1.0f);
+
+	float scale = 0.1f;
+	float speed = 0.1f;
+	float rotationspeed = 30.0f * Math::PI/180.0f;
+	 
+
+	//mode: 0=still, 1=running
+	int mode = 0;
+
+	int runcounter;
+
+	Model nextFrame()
+	{
+		switch (mode) {
+		case 0:
+			return characterModel;
+		case 1:
+			runcounter += 1;
+			if (runcounter == 24)
+				runcounter = 0;
+			position += direction * speed;
+			std::cout << position;
+			return runFrames[runcounter];
+		}
+	}
+
+	void run() {
+		switch (mode) {
+		case 0:
+			mode = 1;
+			break;
+		case 1:
+			mode = 0;
+			break;
+		}
+	}
+
+	void rotate(int left) {
+		
+		direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y, 
+			-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
+		
+		rotation += Vector3f(0,left*rotationspeed * 180 / Math::PI,0);
+	}
+
+	void initCharacter(Vector3f pos, Vector3f rot = Vector3f(0,0,0))
+	{
+		position = pos;
+		rotation = rot;
+		
+		std::string base = "Resources\\Models\\Shadowman";
+		characterModel = loadModel(base + "\\Shadowman.obj");
+		characterModel.ka = Vector3f(0.1, 0, 0);
+		characterModel.kd = Vector3f(0.5, 0, 0);
+		characterModel.ks = 8.0f;
+		for (int i = 0; i < 24; i++) {
+			std::string number;
+			if (i < 9) {
+				number = "0" + std::to_string(i + 1);
+			}
+			else {
+				number = std::to_string(i + 1);
+			}
+			std::string path = base + "\\RunAnimation\\Shadowmanv_0000" + number + ".obj";
+			
+			runFrames[i] = loadModel(path);
+			runFrames[i].ka = Vector3f(0.1, 0, 0);
+			runFrames[i].kd = Vector3f(0.5, 0, 0);
+			runFrames[i].ks = 8.0f;
+		}
+
+	}
+};
 
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
@@ -69,6 +152,7 @@ bool FileExists(const std::string & Filename) {
 	return access(Filename.c_str(), 0) == 0;
 }
 
+
 //function to draw coordinate axes.
 void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
 
@@ -82,14 +166,43 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
+//Vector3f calculateTerrainClick(Vector3f camera, Vector3f mouseposition) {
+
+//}
+
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
+	void setProjection() {
+		// Orthographic
+		float znear = nn;
+		float zfar = ff;
+		std::cout << "near" << znear;
+		std::cout << "far" << zfar;
+
+		float aspect = (float)width / (float)height;
+
+
+		float top = 1.0f;
+		float bottom = -top;
+		float right = top * aspect;
+		float left = -right;
+
+		projMatrix[0] = 2.0f / (right - left);
+		projMatrix[3] = -((right + left) / (right - left));
+		projMatrix[5] = 2.0f / (top - bottom);
+		projMatrix[7] = -((top + bottom) / (top - bottom));
+		projMatrix[10] = -2.0f / (zfar - znear);
+		projMatrix[11] = -((zfar + znear) / (zfar - znear));
+		projMatrix[15] = 1.0f;
+	}
 
     void init() {
         width = window.getWidth();
-    		height = window.getHeight();
+    	height = window.getHeight();
         window.setGlVersion(3, 3, true);
         window.create("Final Project", 1024, 1024);
+		width = window.getWidth();
+		height = window.getHeight();
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -124,50 +237,40 @@ public:
             std::cerr << e.what() << std::endl;
         }
 
-        viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, -3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
-    		// Orthographic
-    		float znear = nn;
-    		float zfar = ff;
-    		std::cout << "near" << znear;
-    		std::cout << "far" << zfar;
+        viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, 3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
+		viewPosition = Vector3f(0, 2.0f, 3.0f);
+		viewRotation = Vector3f(0, 2.0f, 3.0f);
 
-    		float aspect = (float)width / (float)height;
+		setProjection();
+		std::cout << projMatrix.str();
+		
+		defaultShader.bind();
+    	defaultShader.uniform1i("colorMap", 0);
+    	defaultShader.uniform1i("shadowMap", 1);
+    	defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
-    		float top = 1.0f;
-    		float bottom = -1.0f;
-    		float right = top * aspect;
-    		float left = bottom * aspect;
+        // Correspond the OpenGL texture units 0 and 1 with the
+        // colorMap and shadowMap uniforms in the shader
+    	blinnPhong.bind();
+    	blinnPhong.uniform1i("colorMap", 0);
+    	blinnPhong.uniform1i("shadowMap", 1);
 
-    		projMatrix[0] = 2.0f / (right - left);
-    		projMatrix[3] = -((right + left) / (right - left));
-    		projMatrix[5] = 2.0f / (top - bottom);
-    		projMatrix[7] = -((top + bottom) / (top - bottom));
-    		projMatrix[10] = -2.0f / (zfar - znear);
-    		projMatrix[11] = -((zfar + znear) / (zfar - znear));
-    		projMatrix[15] = 1.0f;
+        // Upload the projection matrix once, if it doesn't change
+        // during the game we don't need to reupload it
+    	blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
+        glEnable(GL_DEPTH_TEST);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
-    		defaultShader.bind();
-    		defaultShader.uniform1i("colorMap", 0);
-    		defaultShader.uniform1i("shadowMap", 1);
-    		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+    	//Init models
+    	tmp = loadModel("Resources\\Models\\Shadowman\\Shadowmanv_000001.obj");
+    	tmp.ka = Vector3f(0.1, 0, 0);
+    	tmp.kd = Vector3f(0.5, 0, 0);
+    	tmp.ks = 8.0f;
 
-            // Correspond the OpenGL texture units 0 and 1 with the
-            // colorMap and shadowMap uniforms in the shader
-    		blinnPhong.bind();
-    		blinnPhong.uniform1i("colorMap", 0);
-    		blinnPhong.uniform1i("shadowMap", 1);
+		//Init character
+		character = Character();
+		character.initCharacter(Vector3f(0, 0, 0));
 
-            // Upload the projection matrix once, if it doesn't change
-            // during the game we don't need to reupload it
-    		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
-            glEnable(GL_DEPTH_TEST);
-            glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-
-    		//Init models
-    		tmp = loadModel("Resources\\dragon.obj");
-    		tmp.ka = Vector3f(0.1, 0, 0);
-    		tmp.kd = Vector3f(0.5, 0, 0);
-    		tmp.ks = 8.0f;
     }
 
     void update() {
@@ -176,18 +279,26 @@ public:
         while (!window.shouldClose()) {
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+			std::cout << viewMatrix.str();
             viewMatrix.translate(Vector3f(side, up, forward));
-                  // ...
-      			blinnPhong.bind();
-      			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
-      			drawModel(blinnPhong, tmp, Vector3f(0, 0, 0), lightPosition, lightColor);
+			rotateCamera();
+			
+			
+      			
+			blinnPhong.bind();
+			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+			
+			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
 
-      			if (showCoord) {
-      				defaultShader.bind();
-      				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
-      				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
-      			}
+			if (cameraFollow) {
+				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
+			}
+
+			if (showCoord) {
+      			defaultShader.bind();
+      			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+      			drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
+      		}
 
             window.update();
           }
@@ -198,9 +309,9 @@ public:
 		//Coordsystem lines.
 		Vector3f coords[] = {
 			Vector3f(0,0,0),
-			Vector3f(1,0,0),
-			Vector3f(0,1,0),
-			Vector3f(0,0,1)
+			Vector3f(100,0,0),
+			Vector3f(0,100,0),
+			Vector3f(0,0,100)
 		};
 		unsigned int indices[] = {
 			0, 1, // x
@@ -231,34 +342,43 @@ public:
 		std::cout << "Key pressed: " << key << std::endl;
 		switch (key) {
 		case GLFW_KEY_W:
-			forward -= step;
-			break;
-		case GLFW_KEY_S:
+			//forward
 			forward += step;
 			break;
-		case GLFW_KEY_A:
-			side -= step;
+		case GLFW_KEY_S:
+			//backward
+			forward -= step;
 			break;
-		case GLFW_KEY_D:
+		case GLFW_KEY_A:
+			//pan left
 			side += step;
 			break;
-		case GLFW_KEY_Y:
-			nn -= 1.0f;
-			break;
-		case GLFW_KEY_H:
-			nn += 1.0f;
-			break;
-		case GLFW_KEY_T:
-			ff -= 1.0f;
-			break;
-		case GLFW_KEY_G:
-			ff += 1.0f;
+		case GLFW_KEY_D:
+			//pan right
+			side -= step;
 			break;
 		case GLFW_KEY_R:
-			up += step;
+			//pan up
+			up -= step;
 			break;
 		case GLFW_KEY_F:
-			up -= step;
+			// pan down
+			up += step;
+			break;
+		case GLFW_KEY_SPACE:
+			character.run();
+			break;
+		case GLFW_KEY_Q:
+			angle += cam_rot_sp;
+			break;
+		case GLFW_KEY_E:
+			angle -= cam_rot_sp;
+			break;
+		case GLFW_KEY_LEFT:
+			character.rotate(1);
+			break;
+		case GLFW_KEY_RIGHT:
+			character.rotate(-1);
 			break;
 		}
     }
@@ -269,32 +389,40 @@ public:
 
     void onKeyReleased(int key, int mods)
     {
-		float step = 0.01f;
 		switch (key) {
 		case GLFW_KEY_W:
-			forward += step;
-			break;
-		case GLFW_KEY_S:
+			//forward
 			forward -= step;
 			break;
-		case GLFW_KEY_A:
-			side += step;
+		case GLFW_KEY_S:
+			//backward
+			forward += step;
 			break;
-		case GLFW_KEY_D:
+		case GLFW_KEY_A:
+			//pan left
 			side -= step;
 			break;
+		case GLFW_KEY_D:
+			//pan right
+			side += step;
+			break;
 		case GLFW_KEY_R:
-			up -= step;
+			//pan up
+			up += step;
 			break;
 		case GLFW_KEY_F:
-			up += step;
+			//pan down
+			up -= step;
+			break;
+		case GLFW_KEY_SPACE:
+			character.run();
 			break;
 		}
     }
 
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
     void onMouseMove(float x, float y) {
-       // std::cout << "Mouse at position: " << x << " " << y << std::endl;
+       std::cout << "Mouse at position: " << x << " " << y << std::endl;
     }
 
     // If one of the mouse buttons is pressed this function will be called
@@ -312,6 +440,13 @@ public:
 
     }
 
+	void rotateCamera() {
+		Vector3f direction = viewRotation;
+		float radAngle = angle * Math::PI / 180.f;
+		viewRotation = Vector3f(direction.x*cosf((float)radAngle) + direction.z*sinf((float)radAngle), direction.y,
+			-direction.x*sinf((float)radAngle) + direction.z*cosf((float)radAngle));
+	}
+
 private:
     Window window;
 
@@ -322,7 +457,11 @@ private:
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
+
     Matrix4f viewMatrix;
+	Vector3f viewPosition;
+	Vector3f viewRotation;
+	bool cameraFollow = 1;
 
 	Vector3f lightPosition;
 	Vector3f lightColor;
@@ -334,7 +473,8 @@ private:
 
 	float forward = 0;
 	float side = 0;
-  float up = 0;
+	float up = 0;
+	float angle = 0;
 
 	uint width;
 	uint height;
@@ -342,9 +482,12 @@ private:
 	float nn = 1.0f;
 	float ff = 10.0f;
 	float step = 0.01f;
+	float cam_rot_sp = 0.1f;
 
 	Model tmp;
+	Character character;
 };
+
 
 
 int main()
