@@ -15,6 +15,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <cstdio>
+#include <chrono>
+#include <thread>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -32,6 +36,7 @@ class Character
 public:
 	Model characterModel;
 	Model runFrames[24];
+	Model idleFrames[59];
 	Vector3f position;
 	Vector3f rotation;
 	Vector3f direction = Vector3f(0,0,1.0f);
@@ -44,19 +49,25 @@ public:
 	//mode: 0=still, 1=running
 	int mode = 0;
 
+	int idlecounter;
 	int runcounter;
+
 
 	Model nextFrame()
 	{
 		switch (mode) {
 		case 0:
-			return characterModel;
+			idlecounter += 1;
+			if (idlecounter == 59)
+				idlecounter = 0;
+			return idleFrames[idlecounter];
 		case 1:
+			std::cout << '\n';
+
 			runcounter += 1;
 			if (runcounter == 24)
 				runcounter = 0;
 			position += direction * speed;
-			std::cout << position;
 			return runFrames[runcounter];
 		}
 	}
@@ -104,6 +115,22 @@ public:
 			runFrames[i].ka = Vector3f(0.1, 0, 0);
 			runFrames[i].kd = Vector3f(0.5, 0, 0);
 			runFrames[i].ks = 8.0f;
+		}
+
+		for (int i = 0; i < 59; i++) {
+			std::string number;
+			if (i < 9) {
+				number = "0" + std::to_string(i + 1);
+			}
+			else {
+				number = std::to_string(i + 1);
+			}
+			std::string path = base + "\\IdleAnimation\\Shadowmanv_0000" + number + ".obj";
+
+			idleFrames[i] = loadModel(path);
+			idleFrames[i].ka = Vector3f(0.1, 0, 0);
+			idleFrames[i].kd = Vector3f(0.5, 0, 0);
+			idleFrames[i].ks = 8.0f;
 		}
 
 	}
@@ -267,7 +294,7 @@ public:
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
     	//Init models
-    	tmp = loadModel("Resources\\Models\\Shadowman\\Shadowmanv_000001.obj");
+    	tmp = loadModel("Resources\\Models\\Housev2.obj");
     	tmp.ka = Vector3f(0.1, 0, 0);
     	tmp.kd = Vector3f(0.5, 0, 0);
     	tmp.ks = 8.0f;
@@ -281,10 +308,26 @@ public:
     void update() {
         // This is your game loop
         // Put your real-time logic and rendering in here
+		std::chrono::system_clock::time_point a = std::chrono::system_clock::now();
+		std::chrono::system_clock::time_point b = std::chrono::system_clock::now();
+
+
         while (!window.shouldClose()) {
+
+			a = std::chrono::system_clock::now();
+			std::chrono::duration<double, std::milli> work_time = a - b;
+			if (work_time.count() < 30.0)
+			{
+				std::chrono::duration<double, std::milli> delta_ms(30.0 - work_time.count());
+				auto delta_ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(delta_ms);
+				std::this_thread::sleep_for(std::chrono::milliseconds(delta_ms_duration.count()));
+			}
+			b = std::chrono::system_clock::now();
+			std::chrono::duration<double, std::milli> sleep_time = b - a;
+
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			std::cout << viewMatrix.str();
+			//std::cout << viewMatrix.str();
             viewMatrix.translate(Vector3f(side, up, forward));
 			rotateCamera();
 			
@@ -296,6 +339,7 @@ public:
 			blinnPhong.uniform1f("time", glfwGetTime());
 			
 			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
+			drawModel(blinnPhong, tmp, Vector3f(0), lightPosition, lightColor);
 
 			if (cameraFollow) {
 				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
