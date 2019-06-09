@@ -25,6 +25,7 @@
 #else
 #include <unistd.h>
 #endif
+#include <ctime>
 
 class Character
 {
@@ -208,11 +209,13 @@ public:
         window.addMouseMoveListener(this);
         window.addMouseClickListener(this);
 
-    		// Light init pos.
-    		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
-    		lightColor = Vector3f(1, 1, 1); //White
 
-    		setupCoordSystem();
+		// Light init pos.
+		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
+		lightColor = Vector3f(1, 1, 1); //White
+		
+		//Coordsystem if you want
+		setupCoordSystem();
 
     		try {
                 defaultShader.create();
@@ -237,9 +240,11 @@ public:
             std::cerr << e.what() << std::endl;
         }
 
+
         viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, 3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
 		viewPosition = Vector3f(0, 2.0f, 3.0f);
 		viewRotation = Vector3f(0, 2.0f, 3.0f);
+
 
 		setProjection();
 		std::cout << projMatrix.str();
@@ -287,6 +292,8 @@ public:
       			
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
+
+			blinnPhong.uniform1f("time", glfwGetTime());
 			
 			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
 
@@ -380,6 +387,12 @@ public:
 		case GLFW_KEY_RIGHT:
 			character.rotate(-1);
 			break;
+		case GLFW_KEY_C:
+				showCoord = !showCoord;
+				break;
+		case GLFW_KEY_1:
+			//lookAtMatrix();
+			break;
 		}
     }
 
@@ -469,7 +482,7 @@ private:
 	unsigned int coordVAO;
 	unsigned int coordVBO;
 
-	bool showCoord = 1;
+	bool showCoord = 0;
 
 	float forward = 0;
 	float side = 0;
