@@ -136,6 +136,46 @@ public:
 	}
 };
 
+class Android {
+public:
+	Model Head;
+	Model Body;
+	Model Larm;
+	Model Rarm;
+
+	Vector3f position;
+	Vector3f rotation;
+	Vector3f direction = Vector3f(0, 0, 1.0f);
+
+	void initAndroid(Vector3f pos, Vector3f rot = Vector3f(0, 0, 0)) {
+		position = pos;
+		rotation = rot;
+
+		Head = loadModel("Resources\\Models\\Android\\android_head.obj");
+		Head.ka = Vector3f(0.1, 0, 0);
+		Head.kd = Vector3f(0.5, 0, 0);
+		Head.ks = 8.0f;
+		Body = loadModel("Resources\\Models\\Android\\android_body.obj");
+		Body.ka = Vector3f(0.1, 0, 0);
+		Body.kd = Vector3f(0.5, 0, 0);
+		Body.ks = 8.0f;
+		Larm = loadModel("Resources\\Models\\Android\\android_arm.obj");
+		Larm.ka = Vector3f(0.1, 0, 0);
+		Larm.kd = Vector3f(0.5, 0, 0);
+		Larm.ks = 8.0f;
+		Rarm = loadModel("Resources\\Models\\Android\\android_right_arm.obj");
+		Rarm.ka = Vector3f(0.1, 0, 0);
+		Rarm.kd = Vector3f(0.5, 0, 0);
+		Rarm.ks = 8.0f;
+
+	}
+
+	void rotateArms() {
+		
+		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
+		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
+	}
+};
 
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
@@ -194,9 +234,7 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
-//Vector3f calculateTerrainClick(Vector3f camera, Vector3f mouseposition) {
 
-//}
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
@@ -299,6 +337,15 @@ public:
     	tmp.kd = Vector3f(0.5, 0, 0);
     	tmp.ks = 8.0f;
 
+		/*
+		tmp2 = loadModel("Resources\\Models\\Android\\android_head.obj");
+		tmp2.ka = Vector3f(0.1, 0, 0);
+		tmp2.kd = Vector3f(0.5, 0, 0);
+		tmp2.ks = 8.0f;*/
+		android = Android();
+		android.initAndroid(Vector3f(0, 0, 5.0f));
+
+		
 		//Init character
 		character = Character();
 		character.initCharacter(Vector3f(0, 0, 0));
@@ -340,6 +387,11 @@ public:
 			
 			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
 			drawModel(blinnPhong, tmp, Vector3f(0), lightPosition, lightColor);
+			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			drawModel(blinnPhong, android.Head, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			drawModel(blinnPhong, android.Larm, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			drawModel(blinnPhong, android.Rarm, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+
 
 			if (cameraFollow) {
 				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
@@ -542,7 +594,10 @@ private:
 	float cam_rot_sp = 0.1f;
 
 	Model tmp;
+	Model tmp2;
+
 	Character character;
+	Android android;
 };
 
 
