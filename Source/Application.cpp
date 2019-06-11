@@ -31,6 +31,75 @@
 #endif
 #include <ctime>
 
+// General functions
+// Rudimentary function for drawing models, feel free to replace or change it with your own logic
+// Just make sure you let the shader know whether the model has texture coordinates
+void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1)
+{
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+	modelMatrix.rotate(rotation);
+	modelMatrix.scale(scale);
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform3f("lightPosition", lightPosition);
+	shader.uniform3f("lightColor", lightColor);
+	shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
+	shader.uniform1f("ks", model.ks);
+	shader.uniform3f("ka", model.ka);
+	shader.uniform3f("kd", model.kd);
+
+
+	glBindVertexArray(model.vao);
+	glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
+}
+
+float calculatexzRotation(Vector3f dir, Vector3f b) {
+	
+	Vector3f xa = dir;
+	Vector3f xb = normalize(Vector3f(b.x,0, b.z));
+
+	return -180*(atan2f(1, 0) - atan2f(xb.z, xb.x))/Math::PI;	
+	
+}
+
+// Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
+Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
+	Vector3f forward = normalize(target - camera);
+	Vector3f right = normalize(cross(forward, up));
+	up = cross(right, forward);
+
+	Matrix4f lookAtMatrix;
+	lookAtMatrix[0] = right.x; lookAtMatrix[4] = right.y; lookAtMatrix[8] = right.z;
+	lookAtMatrix[1] = up.x; lookAtMatrix[5] = up.y; lookAtMatrix[9] = up.z;
+	lookAtMatrix[2] = -forward.x; lookAtMatrix[6] = -forward.y; lookAtMatrix[10] = -forward.z;
+
+	Matrix4f translateMatrix;
+	translateMatrix[12] = -camera.x;
+	translateMatrix[13] = -camera.y;
+	translateMatrix[14] = -camera.z;
+
+	return lookAtMatrix * translateMatrix;
+}
+
+bool FileExists(const std::string & Filename) {
+	return access(Filename.c_str(), 0) == 0;
+}
+
+//function to draw coordinate axes.
+void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
+
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+
+
 class Character
 {
 public:
@@ -140,16 +209,29 @@ class Android {
 public:
 	Model Head;
 	Model Body;
-	Model Larm;
-	Model Rarm;
+	Model Arm;
 
 	Vector3f position;
 	Vector3f rotation;
+
+	//head
+	Vector3f headRotation;
+	Vector3f headPosition = Vector3f(0, 2.8f, 0);
+
+	//arms
+	Vector3f larmRotation;
+	Vector3f rarmRotation;
+	Vector3f larmPosition = Vector3f(1.4f, 1.5, 0);
+	Vector3f rarmPosition = Vector3f(-1.4f, 1.5, 0);
+	
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 
-	void initAndroid(Vector3f pos, Vector3f rot = Vector3f(0, 0, 0)) {
+	void initAndroid(Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0,0,0), Vector3f headRot = Vector3f(0,0,0)) {
 		position = pos;
 		rotation = rot;
+		larmRotation = armRot;
+		rarmRotation = armRot;
+		headRotation = headRot;
 
 		Head = loadModel("Resources\\Models\\Android\\android_head.obj");
 		Head.ka = Vector3f(0.1, 0, 0);
@@ -159,80 +241,36 @@ public:
 		Body.ka = Vector3f(0.1, 0, 0);
 		Body.kd = Vector3f(0.5, 0, 0);
 		Body.ks = 8.0f;
-		Larm = loadModel("Resources\\Models\\Android\\android_arm.obj");
-		Larm.ka = Vector3f(0.1, 0, 0);
-		Larm.kd = Vector3f(0.5, 0, 0);
-		Larm.ks = 8.0f;
-		Rarm = loadModel("Resources\\Models\\Android\\android_right_arm.obj");
-		Rarm.ka = Vector3f(0.1, 0, 0);
-		Rarm.kd = Vector3f(0.5, 0, 0);
-		Rarm.ks = 8.0f;
+		Arm = loadModel("Resources\\Models\\Android\\android_arm.obj");
+		Arm.ka = Vector3f(0.1, 0, 0);
+		Arm.kd = Vector3f(0.5, 0, 0);
+		Arm.ks = 8.0f;
+		
 
 	}
 
-	void rotateArms() {
-		
+	void rotateArms(Vector3f target) {
+
+		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + rarmPosition))));
+		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + larmPosition))));
+
+		//std::cout << armRotation <<'\n';
+		//armRotation += Vector3f(0.5f, 0, 0);
+		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
+		//		-direction.x*sinf() + direction.z*cosf());
+		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
+		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
+	}
+	
+	void rotateHead() {
+
+		headRotation += Vector3f(0, 0.5f, 0);
+		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
+		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 };
-
-// Rudimentary function for drawing models, feel free to replace or change it with your own logic
-// Just make sure you let the shader know whether the model has texture coordinates
-void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1)
-{
-    Matrix4f modelMatrix;
-    modelMatrix.translate(position);
-    modelMatrix.rotate(rotation);
-    modelMatrix.scale(scale);
-    shader.uniformMatrix4f("modelMatrix", modelMatrix);
-	shader.uniform3f("lightPosition", lightPosition);
-	shader.uniform3f("lightColor", lightColor);
-    shader.uniform1i("hasTexCoords", model.texCoords.size() > 0);
-	shader.uniform1f("ks", model.ks);
-	shader.uniform3f("ka", model.ka);
-	shader.uniform3f("kd", model.kd);
-
-    glBindVertexArray(model.vao);
-    glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
-}
-
-// Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
-Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
-	Vector3f forward = normalize(target - camera);
-	Vector3f right = normalize(cross(forward, up));
-	up = cross(right, forward);
-
-	Matrix4f lookAtMatrix;
-	lookAtMatrix[0] = right.x; lookAtMatrix[4] = right.y; lookAtMatrix[8] = right.z;
-	lookAtMatrix[1] = up.x; lookAtMatrix[5] = up.y; lookAtMatrix[9] = up.z;
-	lookAtMatrix[2] = -forward.x; lookAtMatrix[6] = -forward.y; lookAtMatrix[10] = -forward.z;
-
-	Matrix4f translateMatrix;
-	translateMatrix[12] = -camera.x;
-	translateMatrix[13] = -camera.y;
-	translateMatrix[14] = -camera.z;
-
-	return lookAtMatrix * translateMatrix;
-}
-
-bool FileExists(const std::string & Filename) {
-	return access(Filename.c_str(), 0) == 0;
-}
-
-
-//function to draw coordinate axes.
-void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
-
-	Matrix4f modelMatrix;
-	modelMatrix.translate(position);
-
-	shader.uniformMatrix4f("modelMatrix", modelMatrix);
-
-	glBindVertexArray(vao);
-	glDrawElements(GL_LINES,6, GL_UNSIGNED_INT,0);
-	glBindVertexArray(0);
-}
 
 
 
@@ -361,6 +399,7 @@ public:
 
         while (!window.shouldClose()) {
 
+			
 			a = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> work_time = a - b;
 			if (work_time.count() < 30.0)
@@ -371,7 +410,7 @@ public:
 			}
 			b = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> sleep_time = b - a;
-
+			
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			//std::cout << viewMatrix.str();
@@ -386,12 +425,16 @@ public:
 			blinnPhong.uniform1f("time", glfwGetTime());
 			
 			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
+			
 			drawModel(blinnPhong, tmp, Vector3f(0), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Head, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Larm, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Rarm, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			
 
+			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
+			drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
+			drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+			android.rotateArms(character.position);
+			android.rotateHead();
 
 			if (cameraFollow) {
 				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
