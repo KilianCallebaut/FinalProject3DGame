@@ -9,9 +9,10 @@
 Terrain initializeTerrain() {
 	Terrain terrain;
 
-	terrain.seed = std::time(nullptr); //Seed for height generation
-	terrain.size = 800; //Length of the terrain
-	terrain.vertexCount = 128; //Number of vertices in one direction (x or z)
+	srand(time(0));
+	terrain.seed = rand()%1000000000; //Seed for height generation
+	terrain.size = 20; //Length of the terrain
+	terrain.vertexCount = 64; //Number of vertices in one direction (x or z)
 	terrain.maxHeight = 2.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
@@ -24,7 +25,10 @@ Terrain initializeTerrain() {
 			float z_coord = (float)i / ((float)terrain.vertexCount - 1) * terrain.size;
 			terrain.vertices.push_back(Vector3f(x_coord, y_coord, z_coord));
 
-			terrain.normals.push_back(calculateNormal(j,i,terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight));
+
+			Vector3f n = calculateNormal(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight);
+			terrain.normals.push_back(n);
+			//terrain.normals.push_back(Vector3f(0,1,0));
 
 			float r = j % 2;
 			float g = 0;

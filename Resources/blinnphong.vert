@@ -6,6 +6,7 @@ uniform mat4 modelMatrix;
 
 uniform vec3 lightColor;
 uniform vec3 lightPosition;
+uniform vec3 viewPos;
 uniform vec3 kd;
 uniform vec3 ka;
 uniform float ks;
@@ -23,6 +24,7 @@ out vec3 lightPos;
 out vec3 passLightColor;
 out vec3 passkd;
 out vec3 passka;
+out vec3 passViewPos;
 out float passks;
 
 void main() {
@@ -37,5 +39,6 @@ void main() {
 	passks = ks;
 	passka = ka;
 	lightPos = lightPosition;
+	passViewPos = viewPos;
 }
 	
