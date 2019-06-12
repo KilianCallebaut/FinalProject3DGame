@@ -1,0 +1,78 @@
+# Blender MTL File: 'Housev2.blend'
+# Material Count: 7
+
+newmtl Glass
+Ns 96.078431
+Ka 0.583026 0.583026 0.583026
+Kd 0.041394 0.482194 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 3
+
+newmtl Material.002
+Ns 486.274510
+Ka 0.160019 0.164218 0.202952
+Kd 0.800000 0.375420 0.015082
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\Gold.jpg
+
+newmtl Roof
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.135859 0.091570
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\roof.jpg
+
+newmtl TreeLeafs
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.027269 0.182657 0.019564
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\treeleafs.jpg
+
+newmtl Wall
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\wall.jpg
+
+newmtl Wood
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.656410 0.269061 0.069684
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\wood.jpeg
+
+newmtl grass
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\\Users\\mrKC1\\Documents\\GitHub\\FinalProject3DGame\\Resources\\Textures\\grass.jpg

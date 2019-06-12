@@ -21,14 +21,14 @@ Terrain initializeTerrain() {
 	for (int i = 0; i < terrain.vertexCount; i++) {
 		for (int j = 0; j < terrain.vertexCount; j++) {
 			float x_coord = (float)j / ((float)terrain.vertexCount - 1) * terrain.size;
-			float y_coord = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight) * terrain.maxHeight;
+			float y_coord = 0;// generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight)* terrain.maxHeight;
 			float z_coord = (float)i / ((float)terrain.vertexCount - 1) * terrain.size;
 			terrain.vertices.push_back(Vector3f(x_coord, y_coord, z_coord));
 
 
-			Vector3f n = calculateNormal(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight);
-			terrain.normals.push_back(n);
-			//terrain.normals.push_back(Vector3f(0,1,0));
+			//Vector3f n = calculateNormal(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight);
+			//terrain.normals.push_back(n);
+			terrain.normals.push_back(Vector3f(0,1,0));
 
 			float r = j % 2;
 			float g = 0;
