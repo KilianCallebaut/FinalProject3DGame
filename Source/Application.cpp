@@ -141,8 +141,8 @@ public:
 	Vector3f rotation;
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 
-	float scale = 0.1f;
-	float speed = 0.1f;
+	float scale = 1.0f;
+	float speed = 1.0f;
 	float rotationspeed = 30.0f * Math::PI / 180.0f;
 
 
@@ -163,8 +163,6 @@ public:
 				idlecounter = 0;
 			return idleFrames[idlecounter];
 		case 1:
-			std::cout << '\n';
-
 			runcounter += 1;
 			if (runcounter == 24)
 				runcounter = 0;
@@ -352,10 +350,12 @@ public:
 			std::cerr << e.what() << std::endl;
 		}
 		projMatrix = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
-		viewMatrix = lookAtMatrix(Vector3f(0, 5, -5), Vector3f(), Vector3f(0, 1.0f, 0));
+		Vector3f initPos = Vector3f(0, 40, -40);
+		viewMatrix = lookAtMatrix(initPos, Vector3f(), Vector3f(0, 1.0f, 0));
+		viewPosition = initPos;
+		viewRotation = initPos;
 
 		//Init shaders.
-
 		// Correspond the OpenGL texture units 0 and 1 with the
 		// colorMap and shadowMap uniforms in the shader
 		blinnPhong.bind();
@@ -379,7 +379,7 @@ public:
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
 		// Initialize light position and color.
-		lightPosition = Vector3f(-20, 20, -20);
+		lightPosition = Vector3f(-200, 200, -200);
 		lightColor = Vector3f(1, 1, 1); //White
 
 		//Init surface
@@ -391,10 +391,10 @@ public:
 		setupShadowFrameBuffer();
 
 		//Init models
-		/*tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
-		tmp.ka = Vector3f(0.1, 0.8, 0.4);
+		tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
+		tmp.ka = Vector3f(0.1, 0.1, 0.1);
 		tmp.kd = Vector3f(0, 0.1, 0);
-		tmp.ks = 8.0f;*/
+		tmp.ks = 8.0f;
 
 		//Init boss
 		android = Android();
@@ -451,6 +451,9 @@ public:
 
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
+			//Set the height to terrain level
+			//float y = getHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			//std::cout << y << std::endl;
 
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
@@ -462,10 +465,10 @@ public:
 				//renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
 				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-				drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-				drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-				drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-				drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+				//drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+				//drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
+				//drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
+				//drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
 				
 				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -481,12 +484,12 @@ public:
 			//renderCube(blinnPhong, cube_02, Vector3f(1, 1, 3), lightPosition, lightColor);
 			//renderCube(blinnPhong, cube_01, Vector3f(3, 1, 1), lightPosition, lightColor);
 			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-			drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-			drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
-			android.rotateArms(character.position);
-			android.rotateHead();
+			//drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
+			//drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
+			//drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
+			//drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+			//android.rotateArms(character.position);
+			//android.rotateHead();
 
 			terrainShader.bind();
 			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -501,7 +504,8 @@ public:
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
 			}
-			
+			viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
+
 			// Processes input and swaps the window buffer
             window.update();
         }
@@ -726,7 +730,7 @@ private:
 	// Screen/shadow width and height 
 	const int SCR_WIDTH = 1024;
 	const int SCR_HEIGHT = 1024;
-	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
 	//Coordinate system stuff
 	unsigned int coordVAO;

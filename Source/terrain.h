@@ -15,11 +15,12 @@ public:
 	std::vector<unsigned int> indices;
 
 	float size;
-	int vertexCount;
+	int vertexCount = 128;
 	int seed;
 	float maxHeight;
 	int interpolationSteps;
 	float roughness;
+	std::vector<std::vector<float>> heights;
 
 	GLuint vao;
 };
@@ -31,3 +32,5 @@ float getSmoothNoise(int x, int z, int seed);
 float getNoise(int x, int z, int seed);
 float interpolate(float a, float b, float blend);
 float getInterpolatedNoise(float x, float z, int seed);
+float getHeight(float xPos, float zPos, std::vector<std::vector<float>> heights, float size, float vertexCount);
+float barryCentric(Vector3f p1, Vector3f p2, Vector3f p3, Vector2f pos);
