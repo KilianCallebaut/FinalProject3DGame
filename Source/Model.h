@@ -3,7 +3,6 @@
 #include <GDT/OpenGL.h>
 #include <GDT/Vector2f.h>
 #include <GDT/Vector3f.h>
-#include <GDT/Vector4f.h>
 
 #include <vector>
 #include <string>

@@ -12,6 +12,7 @@ in vec3 passLightColor;
 in vec3 lightPos;
 in vec3 passkd;
 in vec3 passka;
+in vec3 passViewPos;
 in float passks;
 
 out vec4 finalColor;
@@ -20,7 +21,7 @@ void main() {
     vec3 normal = normalize(passNormal);	
 	//lightPos = vec3(sin(time), 1.0, cos(time));
     vec3 lightDir   = normalize(lightPos - passPosition.xyz);
-	vec3 viewDir = normalize(lightDir - passPosition.xyz);
+	vec3 viewDir = normalize(passViewPos - passPosition.xyz);
 	vec3 halfwayDir = normalize(lightDir + viewDir);
 
 		
@@ -37,7 +38,7 @@ void main() {
 
 	//Specular
 	float spec = pow(max(dot(normal, halfwayDir), 0.0), passks);
-	vec4 specular = vec4((passLightColor * spec),1);
+	vec4 specular = vec4((spec*passLightColor),1);
 	
     finalColor = specular + ambient + diffuse;
 }

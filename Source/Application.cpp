@@ -1,5 +1,8 @@
 #include "Model.h"
+#include "Cube.h"
 #include "Image.h"
+#include "Terrain.h"
+#include <stb_image.h>
 
 
 #include <GDT/Window.h>
@@ -31,7 +34,28 @@
 #endif
 #include <ctime>
 
-// General functions
+
+// Render a cube
+void renderCube(ShaderProgram& shader, const Cube& cube, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1) {
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+	modelMatrix.rotate(rotation);
+	modelMatrix.scale(scale);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform3f("lightPosition", lightPosition);
+	shader.uniform3f("lightColor", lightColor);
+	shader.uniform1i("hasTexCoords", cube.texCoords.size() > 0);
+	shader.uniform1f("ks", cube.ks);
+	shader.uniform3f("ka", cube.ka);
+	shader.uniform3f("kd", cube.kd);
+
+	// render Cube
+	glBindVertexArray(cube.vao);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
 // Rudimentary function for drawing models, feel free to replace or change it with your own logic
 // Just make sure you let the shader know whether the model has texture coordinates
 void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1)
@@ -54,12 +78,12 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 }
 
 float calculatexzRotation(Vector3f dir, Vector3f b) {
-	
+
 	Vector3f xa = dir;
 	Vector3f xb = normalize(Vector3f(b.x,0, b.z));
 
-	return -180*(atan2f(1, 0) - atan2f(xb.z, xb.x))/Math::PI;	
-	
+	return -180*(atan2f(1, 0) - atan2f(xb.z, xb.x))/Math::PI;
+
 }
 
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
@@ -81,18 +105,31 @@ Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
 	return lookAtMatrix * translateMatrix;
 }
 
+//Check if a file exists
 bool FileExists(const std::string & Filename) {
 	return access(Filename.c_str(), 0) == 0;
 }
 
-//function to draw coordinate axes.
-void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
-
+//Draw the surface
+void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vector3f position) {
 	Matrix4f modelMatrix;
 	modelMatrix.translate(position);
 
 	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, image.handle);
+	glBindVertexArray(terrain.vao);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDrawElements(GL_TRIANGLES, terrain.indices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
 
+//function to draw coordinate axes.
+void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao) {
+	Matrix4f modelMatrix;
+	modelMatrix.translate(position);
+
+	shader.uniformMatrix4f("modelMatrix", modelMatrix);
 	glBindVertexArray(vao);
 	glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -113,7 +150,7 @@ public:
 	float scale = 0.1f;
 	float speed = 0.1f;
 	float rotationspeed = 30.0f * Math::PI/180.0f;
-	 
+
 
 	//mode: 0=still, 1=running
 	int mode = 0;
@@ -153,10 +190,10 @@ public:
 	}
 
 	void rotate(int left) {
-		
-		direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y, 
+
+		direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 			-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
-		
+
 		rotation += Vector3f(0,left*rotationspeed * 180 / Math::PI,0);
 	}
 
@@ -164,7 +201,7 @@ public:
 	{
 		position = pos;
 		rotation = rot;
-		
+
 		std::string base = "Resources\\Models\\Shadowman";
 		characterModel = loadModel(base + "\\Shadowman.obj");
 		characterModel.ka = Vector3f(0.1, 0, 0);
@@ -179,7 +216,7 @@ public:
 				number = std::to_string(i + 1);
 			}
 			std::string path = base + "\\RunAnimation\\Shadowmanv_0000" + number + ".obj";
-			
+
 			runFrames[i] = loadModel(path);
 			runFrames[i].ka = Vector3f(0.1, 0, 0);
 			runFrames[i].kd = Vector3f(0.5, 0, 0);
@@ -223,7 +260,7 @@ public:
 	Vector3f rarmRotation;
 	Vector3f larmPosition = Vector3f(1.4f, 1.5, 0);
 	Vector3f rarmPosition = Vector3f(-1.4f, 1.5, 0);
-	
+
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 
 	void initAndroid(Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0,0,0), Vector3f headRot = Vector3f(0,0,0)) {
@@ -245,7 +282,7 @@ public:
 		Arm.ka = Vector3f(0.1, 0, 0);
 		Arm.kd = Vector3f(0.5, 0, 0);
 		Arm.ks = 8.0f;
-		
+
 
 	}
 
@@ -261,7 +298,7 @@ public:
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
-	
+
 	void rotateHead() {
 
 		headRotation += Vector3f(0, 0.5f, 0);
@@ -304,9 +341,7 @@ public:
         width = window.getWidth();
     	height = window.getHeight();
         window.setGlVersion(3, 3, true);
-        window.create("Final Project", 1024, 1024);
-		width = window.getWidth();
-		height = window.getHeight();
+        window.create("Final Project", SCR_WIDTH, SCR_HEIGHT);
 
         window.addKeyListener(this);
         window.addMouseMoveListener(this);
@@ -314,11 +349,15 @@ public:
 
 
 		// Light init pos.
-		lightPosition = Vector3f(0, 0, 1); //position it at  1 1 1
+		lightPosition = Vector3f(-20, 20, -20);
 		lightColor = Vector3f(1, 1, 1); //White
-		
-		//Coordsystem if you want
+
+		//Init surface
+		rockyTerrain = loadImage("C:/users/Emiel/Develop/FinalProject3DGame/Resources/rockyTerrain.jpg");
+		terrain = initializeTerrain();
+
 		setupCoordSystem();
+		setupShadowFrameBuffer();
 
     		try {
                 defaultShader.create();
@@ -331,6 +370,11 @@ public:
           			blinnPhong.addShader(FRAGMENT, "Resources//blinnphong.frag");
           			blinnPhong.build();
 
+								terrainShader.create();
+								terrainShader.addShader(VERTEX, "Resources//terrain.vert");
+								terrainShader.addShader(FRAGMENT, "Resources//terrain.frag");
+								terrainShader.build();
+
                 shadowShader.create();
                 shadowShader.addShader(VERTEX, "Resources//shadow.vert");
                 shadowShader.build();
@@ -338,26 +382,24 @@ public:
                 // Any new shaders can be added below in similar fashion
                 // ....
         }
-        catch (ShaderLoadingException e)
-        {
+        catch (ShaderLoadingException e) {
             std::cerr << e.what() << std::endl;
         }
 
+		projMatrix = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
+		//viewMatrix = lookAtMatrix(Vector3f(-20,20,-20), Vector3f(), Vector3f(0, 1.0f, 0));
+		viewMatrix = lookAtMatrix(Vector3f(0,5,-5), Vector3f(), Vector3f(0, 1.0f, 0));
 
-        viewMatrix = lookAtMatrix(Vector3f(0, 2.0f, 3.0f), Vector3f(), Vector3f(0, 1.0f, 0));
-		viewPosition = Vector3f(0, 2.0f, 3.0f);
-		viewRotation = Vector3f(0, 2.0f, 3.0f);
-
-
-		setProjection();
-		std::cout << projMatrix.str();
-		
+		//Init shaders.
 		defaultShader.bind();
-    	defaultShader.uniform1i("colorMap", 0);
-    	defaultShader.uniform1i("shadowMap", 1);
-    	defaultShader.uniformMatrix4f("projMatrix", projMatrix);
+		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
-        // Correspond the OpenGL texture units 0 and 1 with the
+		terrainShader.bind();
+		terrainShader.uniform1i("colorMap", 0);
+		terrainShader.uniform1i("depthMap", 1);
+		terrainShader.uniformMatrix4f("projMatrix", projMatrix);
+
+		// Correspond the OpenGL texture units 0 and 1 with the
         // colorMap and shadowMap uniforms in the shader
     	blinnPhong.bind();
     	blinnPhong.uniform1i("colorMap", 0);
@@ -375,6 +417,16 @@ public:
     	tmp.kd = Vector3f(0.5, 0, 0);
     	tmp.ks = 8.0f;
 
+			cube_01 = loadCube();
+			cube_01.ka = Vector3f(0, 0.5, 0.5);
+			cube_01.kd = Vector3f(0, 0, 0.1);
+			cube_01.ks = 4.0f;
+
+			cube_02 = loadCube();
+			cube_02.ka = Vector3f(0, 0.5, 0.5);
+			cube_02.kd = Vector3f(0, 0, 0.1);
+			cube_02.ks = 4.0f;
+
 		/*
 		tmp2 = loadModel("Resources\\Models\\Android\\android_head.obj");
 		tmp2.ka = Vector3f(0.1, 0, 0);
@@ -383,7 +435,7 @@ public:
 		android = Android();
 		android.initAndroid(Vector3f(0, 0, 5.0f));
 
-		
+
 		//Init character
 		character = Character();
 		character.initCharacter(Vector3f(0, 0, 0));
@@ -399,7 +451,7 @@ public:
 
         while (!window.shouldClose()) {
 
-			
+
 			a = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> work_time = a - b;
 			if (work_time.count() < 30.0)
@@ -410,24 +462,47 @@ public:
 			}
 			b = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> sleep_time = b - a;
-			
+
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			//std::cout << viewMatrix.str();
-            viewMatrix.translate(Vector3f(side, up, forward));
+			viewMatrix.translate(Vector3f(side, up, forward));
 			rotateCamera();
-			
-			
-      			
+			Matrix4f inv = inverse(viewMatrix);
+			Vector3f viewPos = Vector3f(inv[12], inv[13], inv[14]);
+
+			//shadow
+			//Orthographic from light point of view
+			Matrix4f lightProjectionMatrix = orthographic(nn, ff, SHADOW_WIDTH, SHADOW_HEIGHT);
+			Matrix4f lightViewMatrix = lookAtMatrix(lightPosition, Vector3f(0,0,0), Vector3f(0, 1, 0));
+			Matrix4f lightSpaceMatrix = lightProjectionMatrix * lightViewMatrix;
+
+
+
+			shadowShader.bind();
+			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
+			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+				glClear(GL_DEPTH_BUFFER_BIT);
+				//render whole scene for only depthmap
+				renderCube(shadowShader, cube_01, Vector3f(1, 1, 3), lightPosition, lightColor);
+				renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
+				drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
 
 			blinnPhong.uniform1f("time", glfwGetTime());
-			
+			blinnPhong.uniform3f("viewPos", viewPos);
+			drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+			renderCube(blinnPhong, cube_02, Vector3f(1, 1, 3), lightPosition, lightColor);
+			renderCube(blinnPhong, cube_01, Vector3f(3, 1, 1), lightPosition, lightColor);
+
 			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
-			
-			drawModel(blinnPhong, tmp, Vector3f(0), lightPosition, lightColor);
-			
 
 			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
 			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
@@ -436,19 +511,51 @@ public:
 			android.rotateArms(character.position);
 			android.rotateHead();
 
+			terrainShader.bind();
+			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
+			terrainShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
+			terrainShader.uniformMatrix4f("projMatrix", projMatrix);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, depthMap);
+			drawSurface(terrainShader, terrain, rockyTerrain, Vector3f(0, 0, 0));
+
 			if (cameraFollow) {
 				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
 			}
 
 			if (showCoord) {
-      			defaultShader.bind();
-      			defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
-      			drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
-      		}
+				defaultShader.bind();
+				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
+				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
+			}
 
+			// Processes input and swaps the window buffer
             window.update();
           }
         }
+
+		glDeleteFramebuffers(1, &depthMapFBO);
+
+    }
+
+	//Setup the framebuffer that calculates the shadow from the one light point
+	void setupShadowFrameBuffer() {
+		//framebuffer object for rendering the depth map
+		glGenFramebuffers(1, &depthMapFBO);
+		glGenTextures(1, &depthMap);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// attach depth texture as FBO's depth buffer
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	// Setup a coordinate system
 	void setupCoordSystem() {
@@ -465,20 +572,42 @@ public:
 			0, 3  // z
 		};
 
-		unsigned int EBO;
+		GLuint EBO;
+		GLuint coordVBO;
 		glGenBuffers(1, &EBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
 		glGenVertexArrays(1, &coordVAO);
 		glGenBuffers(1, &coordVBO);
 
 		glBindVertexArray(coordVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, coordVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(coords) * sizeof(Vector3f), coords, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3f), coords, GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(0);
+	}
+
+	// Calculate orthographic projection matrix representation of given matrix
+	Matrix4f orthographic(float nn, float ff, uint width, uint height) {
+		Matrix4f matrix;
+		float znear = nn;
+		float zfar = ff;
+		float aspect = (float)width / (float)height;
+		float top = 1.0f;
+		float bottom = -1.0f;
+		float right = top * aspect;
+		float left = bottom * aspect;
+
+		matrix[0] = 2.0f / (right - left);
+		matrix[3] = -((right + left) / (right - left));
+		matrix[5] = 2.0f / (top - bottom);
+		matrix[7] = -((top + bottom) / (top - bottom));
+		matrix[10] = -2.0f / (zfar - znear);
+		matrix[11] = -((zfar + znear) / (zfar - znear));
+		matrix[15] = 1.0f;
+
+		return matrix;
 	}
 
     // In here you can handle key presses
@@ -528,6 +657,12 @@ public:
 			break;
 		case GLFW_KEY_C:
 				showCoord = !showCoord;
+				break;
+		case GLFW_KEY_V:
+				drawterrain = !drawterrain;
+				break;
+		case GLFW_KEY_B:
+				drawTestModel = !drawTestModel;
 				break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
@@ -606,6 +741,7 @@ private:
     ShaderProgram defaultShader;
     ShaderProgram shadowShader;
     ShaderProgram blinnPhong;
+    ShaderProgram terrainShader;
 
     // Projection and view matrices for you to fill in and use
     Matrix4f projMatrix;
@@ -615,14 +751,20 @@ private:
 	Vector3f viewRotation;
 	bool cameraFollow = 1;
 
+	//Only use this if one static light.
 	Vector3f lightPosition;
 	Vector3f lightColor;
 
-	unsigned int coordVAO;
-	unsigned int coordVBO;
+	// Screen/shadow width and height
+	const int SCR_WIDTH = 1024;
+	const int SCR_HEIGHT = 1024;
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
+	//Coordinate system stuff
+	unsigned int coordVAO;
 	bool showCoord = 0;
 
+	//Projection matrix stuff
 	float forward = 0;
 	float side = 0;
 	float up = 0;
@@ -631,16 +773,49 @@ private:
 	uint width;
 	uint height;
 
-	float nn = 1.0f;
-	float ff = 10.0f;
+	float nn = 0.1f;
+	float ff = 1000.0f;
 	float step = 0.01f;
 	float cam_rot_sp = 0.1f;
 
+	//Vertices and texture coordinates for the terrain/water
+	int NbVertX = 2, NbVertY = 2;
+	//vertices
+	std::vector<float> SurfaceVertices3f;
+	//normals
+	std::vector<float> SurfaceNormals3f;
+	//colors
+	std::vector<float> SurfaceColors3f;
+	//tex coords
+	std::vector<float> SurfaceTexCoords2f;
+	//triangle indices (three successive entries: n1, n2, n3 represent a triangle, each n* is an index representing a vertex.)
+	std::vector<unsigned int> SurfaceTriangles3ui;
+	GLuint terrainVAO;
+
+	//shadow
+	GLuint depthMapFBO;
+	GLuint depthMap;
+
+	//Terrain
+	Terrain terrain;
+	bool drawterrain = 0;
+
+	//Images
+	Image rockyTerrain;
+
+	Cube cube_01;
+	Cube cube_02;
+
+	//Models
 	Model tmp;
 	Model tmp2;
 
 	Character character;
 	Android android;
+	bool drawTestModel = 0;
+
+	unsigned int cubeVAO = 0;
+	unsigned int cubeVBO = 0;
 };
 
 
