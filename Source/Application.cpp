@@ -84,6 +84,10 @@ float calculatexzRotation(Vector3f dir, Vector3f b) {
 	return -180 * (atan2f(1, 0) - atan2f(xb.z, xb.x)) / Math::PI;
 }
 
+float calculateDistance(Vector3f a, Vector3f b) {
+	return sqrtf((a - b).sqrMagnitude());
+}
+
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
 Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
 	Vector3f forward = normalize(target - camera);
@@ -154,7 +158,7 @@ public:
 	float rotationspeed = 30.0f * Math::PI / 180.0f;
 
 
-	//mode: 0=still, 1=running
+	//mode: 0=still, 1=running. 2=dead
 	int mode = 0;
 
 	int idlecounter;
@@ -176,6 +180,8 @@ public:
 				runcounter = 0;
 			position += direction * speed;
 			return runFrames[runcounter];
+		case 2:
+			return characterModel;
 		}
 	}
 
@@ -209,11 +215,15 @@ public:
 		position = pos;
 		rotation = rot;
 
+		Vector3f ka = Vector3f(1, 1, 1);
+		Vector3f kd = Vector3f(1, 1, 1);
+		float ks = 96;
+
 		std::string base = projectPath + "Resources\\Models\\Shadowman";
 		characterModel = loadModel(base + "\\Shadowman.obj");
-		characterModel.ka = Vector3f(0.1, 0, 0);
-		characterModel.kd = Vector3f(0.5, 0, 0);
-		characterModel.ks = 8.0f;
+		characterModel.ka = ka;
+		characterModel.kd = kd;
+		characterModel.ks = ks;
 		for (int i = 0; i < 24; i++) {
 			std::string number;
 			if (i < 9) {
@@ -225,9 +235,9 @@ public:
 			std::string path = base + "\\RunAnimation\\Shadowmanv_0000" + number + ".obj";
 
 			runFrames[i] = loadModel(path);
-			runFrames[i].ka = Vector3f(0.1, 1, 0);
-			runFrames[i].kd = Vector3f(0.5, 0, 0);
-			runFrames[i].ks = 8.0f;
+			runFrames[i].ka = ka;
+			runFrames[i].kd = kd;
+			runFrames[i].ks = ks;
 		}
 
 		for (int i = 0; i < 59; i++) {
@@ -241,11 +251,18 @@ public:
 			std::string path = base + "\\IdleAnimation\\Shadowmanv_0000" + number + ".obj";
 
 			idleFrames[i] = loadModel(path);
-			idleFrames[i].ka = Vector3f(0.1, 1, 0);
-			idleFrames[i].kd = Vector3f(0.5, 0, 0);
-			idleFrames[i].ks = 8.0f;
+			idleFrames[i].ka = ka;
+			idleFrames[i].kd = kd;
+			idleFrames[i].ks = ks;
 		}
 
+	}
+
+	void die() {
+		if (mode != 2) {
+			rotation += Vector3f(90, 0, 0);
+			mode = 2;
+		}
 	}
 };
 
@@ -254,34 +271,46 @@ public:
 	Model Head;
 	Model Body;
 	Model Arm;
+	float scale = 10.0f;
 
 	Vector3f position;
 	Vector3f rotation;
 
 	//head
 	Vector3f headRotation;
-	Vector3f headPosition = Vector3f(0, 2.8f, 0);
+	Vector3f headPosition = Vector3f(scale * 0, scale * 2.8f, scale * 0);
 
 	//arms
 	Vector3f larmRotation;
 	Vector3f rarmRotation;
-	Vector3f larmPosition = Vector3f(1.4f, 1.5, 0);
-	Vector3f rarmPosition = Vector3f(-1.4f, 1.5, 0);
+	Vector3f larmPosition = Vector3f(scale * 1.4f, scale * 1.5, scale * 0);
+	Vector3f rarmPosition = Vector3f(scale * -1.4f, scale * 1.5, scale * 0);
 
+	bool shooting = false;
+	Vector3f shotTarget;
+	bool timerS = false;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> timer;
+	bool reTimerS = false;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> rechTimer;
+
+	//projectiles
+	float p_speed = 2.0f;
+
+	//General
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 	std::string projectPath;
+
 
 	void initAndroid(std::string path, Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0, 0, 0), Vector3f headRot = Vector3f(0, 0, 0)) {
 		projectPath = path;
 
 		position = pos;
+		larmPosition += pos;
+		rarmPosition += pos;
 		rotation = rot;
 		larmRotation = armRot;
 		rarmRotation = armRot;
 		headRotation = headRot;
-
-	
-		
 
 		Head = loadModel(projectPath + "Resources\\Models\\Android\\android_head.obj");
 		Head.ka = Vector3f(0.1, 0, 0);
@@ -299,10 +328,28 @@ public:
 
 	}
 
-	void rotateArms(Vector3f target) {
+	void updateAndroid() {
 
-		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + rarmPosition))));
-		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + larmPosition))));
+		if (shotTarget != Vector3f(0)) {
+			rotateArms();
+			rotateHead();
+			shootArms();
+		}
+
+		if (shooting && shotDone()) {
+			resetArms();
+		}
+	}
+
+	void setTarget(Vector3f target) {
+		if (!shooting)
+			shotTarget = target;
+	}
+
+	void rotateArms() {
+
+		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (rarmPosition))));
+		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (larmPosition))));
 
 		//std::cout << armRotation <<'\n';
 		//armRotation += Vector3f(0.5f, 0, 0);
@@ -314,14 +361,77 @@ public:
 
 	void rotateHead() {
 
-		headRotation += Vector3f(0, 0.5f, 0);
+		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (position + headPosition))), 0);
 		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
 		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
-};
 
+	void shootArms() {
+
+		if (!timerS && !shooting) {
+			timer = std::chrono::system_clock::now() + std::chrono::seconds(3);
+			timerS = true;
+		}
+
+		if (timerS && std::chrono::system_clock::now() > timer) {
+			shooting = true;
+			timerS = false;
+
+		}
+
+	}
+
+	bool atTarget(bool left) {
+		if (left) {
+			return calculateDistance(shotTarget, larmPosition) < 2.0f;
+		}
+		return calculateDistance(shotTarget, rarmPosition) < 2.0f;
+	}
+
+	bool shotDone() {
+		if (shooting && atTarget(true) && atTarget(false) && !reTimerS) {
+			rechTimer = std::chrono::system_clock::now() + std::chrono::seconds(3);
+			reTimerS = true;
+		}
+		if (reTimerS && std::chrono::system_clock::now() > rechTimer) {
+			reTimerS = false;
+			return true;
+		}
+		return false;
+	}
+
+	Vector3f armPosition(bool larm) {
+		if (shooting) {
+			if (larm) {
+				larmPosition -= normalize((larmPosition)-shotTarget) * p_speed;
+				return larmPosition;
+			}
+			else {
+				rarmPosition -= normalize((rarmPosition)-shotTarget) * p_speed;
+				return rarmPosition;
+			}
+		}
+		else {
+			if (larm) {
+				return larmPosition;
+			}
+			else {
+				return rarmPosition;
+			}
+		}
+	}
+
+	void resetArms() {
+		larmPosition = Vector3f(scale * 1.4f, scale * 1.5, scale * 0) + position;
+		rarmPosition = Vector3f(scale * -1.4f, scale * 1.5, scale * 0) + position;
+		larmRotation = Vector3f(0);
+		rarmRotation = Vector3f(0);
+		shotTarget = Vector3f(0);
+		shooting = false;
+	}
+};
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
 
@@ -397,23 +507,25 @@ public:
 		lightPosition = Vector3f(-200, 200, -200);
 		lightColor = Vector3f(0.945, 0.855, 0.643); //Sunlight
 
-		//Init surface
+		//Init textures
 		rockyTerrain = loadImage(projectPath + "Resources\\rockyTerrain.jpg");
-		terrain = initializeTerrain();
+		characterTexture = loadImage(projectPath + "Resources\\Textures\\shadowman.jpg");
 
-		//Setup coordsystem (for debugging) and shadowFrameBuffer for depth map 
+		//Setup coordsystem (for debugging), shadowFrameBuffer for depth map, and terrain.
 		setupCoordSystem();
 		setupShadowFrameBuffer();
+		terrain = initializeTerrain();
 
 		//Init models
 		tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
-		tmp.ka = Vector3f(0.1, 0.1, 0.1);
-		tmp.kd = Vector3f(0, 0.1, 0);
+		tmp.ka = Vector3f(0.3, 0, 0.3);
+		tmp.kd = Vector3f(0.3, 0.1, 0.6);
 		tmp.ks = 8.0f;
 
 		//Init boss
 		android = Android();
-		android.initAndroid(projectPath, Vector3f(0, 0, 5.0f));
+		float y = getHeight(200, 200, terrain.heights, terrain.size, terrain.vertexCount);
+		android.initAndroid(projectPath, Vector3f(200, y, 200.0f));
 
 		//Init character
 		character = Character();
@@ -466,12 +578,14 @@ public:
 
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
+			detectHit();
+			android.setTarget(character.position);
+			android.updateAndroid();
 
 			//Set the height to terrain level (terrain collision detection)
 			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
-			std::cout << y << " - ";
 			character.setYPosition(y);
-			std::cout << character.position << std::endl;
+			
 			float yBoss = getHeight(200, 200, terrain.heights, terrain.size, terrain.vertexCount);
 			Vector3f bossPosition = Vector3f(200, yBoss, 200);
 
@@ -481,22 +595,23 @@ public:
 			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 				glClear(GL_DEPTH_BUFFER_BIT);
+				glCullFace(GL_FRONT);
 				//render whole scene for only depthmap
-				renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
-				renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
+				//renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
+				//renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
 				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-				drawModel(shadowShader, android.Body, bossPosition, lightPosition, lightColor, Vector3f(0));
-				drawModel(shadowShader, android.Head, android.headPosition + bossPosition, lightPosition, lightColor, android.headRotation);
-				drawModel(shadowShader, android.Arm, android.larmPosition + bossPosition, lightPosition, lightColor, android.larmRotation);
-				drawModel(shadowShader, android.Arm, android.rarmPosition + bossPosition, lightPosition, lightColor, android.rarmRotation);
-				
+				drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
+				drawModel(shadowShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
+				drawModel(shadowShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
+				drawModel(shadowShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
+
 				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0), lightPosition, lightColor);
+				glCullFace(GL_BACK);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
 			blinnPhong.uniform1f("time", glfwGetTime());
@@ -505,9 +620,11 @@ public:
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
-			//drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+			drawModel(blinnPhong, tmp, Vector3f(50, getHeight(50,100, terrain.heights, terrain.size, terrain.vertexCount), 100), lightPosition, lightColor, Vector3f(0, 180, 0), 10.0f);
 			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
 			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, characterTexture.handle);
 			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
 			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
 
@@ -515,13 +632,15 @@ public:
 			toonShader.uniformMatrix4f("viewMatrix", viewMatrix);
 			toonShader.uniform3f("viewPos", viewPos);
 			toonShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
-			drawModel(toonShader, android.Body, bossPosition , lightPosition, lightColor, Vector3f(0), 10);
-			drawModel(toonShader, android.Head, android.headPosition + bossPosition, lightPosition, lightColor, android.headRotation, 10);
-			drawModel(toonShader, android.Arm, android.larmPosition + bossPosition, lightPosition, lightColor, android.larmRotation, 10);
-			drawModel(blinnPhong, android.Arm, android.rarmPosition + bossPosition, lightPosition, lightColor, android.rarmRotation, 10);
-			android.rotateArms(character.position);
-			android.rotateHead();
-	
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, depthMap);
+			 
+			drawModel(toonShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
+			drawModel(toonShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
+			drawModel(toonShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
+			drawModel(toonShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
+			
 			if (showCoord) {
 				defaultShader.bind();
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -536,6 +655,13 @@ public:
 		glDeleteFramebuffers(1, &depthMapFBO);
 
     }
+
+	void detectHit() {
+		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
+			character.die();
+		}
+	}
+
 
 	//Setup the framebuffer that calculates the shadow from the one light point 
 	void setupShadowFrameBuffer() {
@@ -784,6 +910,7 @@ private:
 
 	//Images
 	Image rockyTerrain;
+	Image characterTexture;
 
 	Cube cube_01;
 	Cube cube_02;

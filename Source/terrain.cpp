@@ -11,9 +11,9 @@ Terrain initializeTerrain() {
 
 	srand(time(0));
 	terrain.seed = rand()%1000000000; //Seed for height generation
-	terrain.size = 800; //Length of the terrain
+	terrain.size = 400; //Length of the terrain
 	terrain.vertexCount = 64; //Number of vertices in one direction (x or z)
-	terrain.maxHeight = 15.0f; //Maximum height
+	terrain.maxHeight = 5.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
 	terrain.ka = Vector3f(0.36, 0.25, 0.2);
