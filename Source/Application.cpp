@@ -666,7 +666,7 @@ public:
 		catch (ShaderLoadingException e) {
 			std::cerr << e.what() << std::endl;
 		}
-		projMatrix = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
+		projMatrix = orthographic(nn, 10, SCR_WIDTH, SCR_HEIGHT);
 		Vector3f initPos = Vector3f(0, 40, -40);
 		viewMatrix = lookAtMatrix(initPos, Vector3f(), Vector3f(0, 1.0f, 0));
 		viewPosition = initPos;
@@ -708,7 +708,7 @@ public:
 		setupShadowFrameBuffer();
 
 		//Init models
-		tmp = loadModel(projectPath + "Resources\\Models\\Android\\android_body.obj");
+		tmp = loadModel(projectPath + "Resources\\77613_Simple_Character__rigged_\\android_body.obj");
 		tmp.ka = Vector3f(0.1, 0.1, 0.1);
 		tmp.kd = Vector3f(0, 0.1, 0);
 		tmp.ks = 8.0f;
@@ -905,10 +905,13 @@ public:
 	}
 
 	// Calculate orthographic projection matrix representation of given matrix
-	Matrix4f orthographic(float nn, float ff, uint width, uint height) {
+	Matrix4f orthographic(float nnn, float fff, uint width, uint height) {
 		Matrix4f matrix;
-		float znear = nn;
-		float zfar = ff;
+		std::cout << nnn << " ";
+		std::cout << fff;
+		std::cout << '\n';
+		float znear = nnn;
+		float zfar = fff;
 		float aspect = (float)width / (float)height;
 		float top = 1.0f;
 		float bottom = -1.0f;
@@ -978,7 +981,7 @@ public:
 			drawTestModel = !drawTestModel;
 			break;
 		case GLFW_KEY_Z:
-			//zoomCamera();
+			zoomCamera();
 			break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
@@ -1060,19 +1063,20 @@ public:
 		viewPosition += Vector3f(0, up, 0);
 	}
 
-	/*
+	
 	void zoomCamera() {
-		//viewPosition += Vector3f(0, up, 0);
-		nn += 10.0f;
+		float a = ff;
+		a -= 980.0f;
 		std::cout << projMatrix.str();
-		Matrix4f m = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
-		std::cout << projMatrix.str()<< '\n';
+		Matrix4f m = orthographic(nn, a, SCR_WIDTH, SCR_HEIGHT);
+		std::cout << m.str()<< '\n';
 
 		blinnPhong.uniformMatrix4f("projMatrix", m);
-		terrainShader.uniformMatrix4f("projMatrix", m);
-		defaultShader.uniformMatrix4f("projMatrix", m);
+		blinnPhong.bind();
+		//terrainShader.uniformMatrix4f("projMatrix", m);
+		//defaultShader.uniformMatrix4f("projMatrix", m);
 	}
-	*/
+	
 
 private:
 	Window window;
