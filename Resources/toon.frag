@@ -1,14 +1,17 @@
-#version 330 core
-uniform sampler2D terrainTexture;
+#version 330
+uniform sampler2D colorMap;
 uniform sampler2D depthMap;
 
+uniform bool hasTexCoords;
 
-out vec4 fragColor;
-  
-//in vec2 passTexCoord;
-//in vec3 passColor;
-//in vec3 passPosition;
-//in vec3 passNormal;
+in vec3 passLightColor;
+in vec3 lightPos;
+in vec3 passkd;
+in vec3 passka;
+in vec3 passViewPos;
+in float passks;
+
+out vec4 finalColor;
 
 in VS_OUT {
     vec3 FragPos;
@@ -16,6 +19,7 @@ in VS_OUT {
     vec2 TexCoords;
     vec4 FragPosLightSpace;
 } fs_in;
+
 
 float ShadowCalculation(vec4 fragPosLightSpace) {
     // perform perspective divide
@@ -39,23 +43,33 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
     return shadow/9.0;
 }  
 
-void main() {	
-	//fragColor = vec4(1,0,0,1);
 
-//	vec3 projCoords = fs_in.FragPosLightSpace.xyz / fs_in.FragPosLightSpace.w;
-//    projCoords = projCoords * 0.5 + 0.5;
-//	fragColor = texture(terrainTexture, fs_in.TexCoords);
-//
+void main() {
+    vec3 normal = normalize(fs_in.Normal);	
+    vec3 lightDir   = normalize(lightPos - fs_in.FragPos.xyz);
+
 	float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
-	//fragColor = vec4(1-shadow, 1-shadow, 1-shadow, 1);
-//	if(shadow == 1.0) {
-//		fragColor = vec4(0,0,0,0);
-//	} else {
-//		fragColor = vec4(1,1,1,1);
-//	}
-	//fragColor = fs_in.FragPosLightSpace;
-   fragColor = texture(terrainTexture, fs_in.TexCoords) * (1-shadow);
-	//fragColor = texture(terrainTexture, fs_in.TexCoords) * vec4(vec3(texture(depthMap, fs_in.TexCoords).r),1.0);
-   // float depthValue = texture(depthMap, fs_in.TexCoords).r;
-    //fragColor = vec4(vec3(depthValue), 1.0);
+
+    vec3 color = vec3(1, 1, 1);
+    if (hasTexCoords) {
+        color = texture(colorMap, fs_in.TexCoords).rgb;
+	}
+
+	//Ambient
+	vec4 ambient = vec4(passka, 1);
+
+	//Diffuse
+	float intensity = max(dot(lightDir, normal), 0.0);
+
+	if (intensity >= 0.95)
+        color = vec4(1.0,1,1,1.0) * color;
+    else if (intensity > 0.5)
+        color = vec4(0.7,0.7,0.7,1.0) * color;
+    else if (intensity > 0.05)
+        color = vec4(0.35,0.35,0.35,1.0) * color;
+    else
+        color = vec4(0.1,0.1,0.1,1.0) * color;
+ 
+   finalColor = vec4(color, 1) * (1-shadow);
 }
+
