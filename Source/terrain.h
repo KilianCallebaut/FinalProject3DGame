@@ -21,9 +21,6 @@ public:
 	int interpolationSteps;
 	float roughness;
 	std::vector<std::vector<float>> heights;
-	Vector3f ka;
-	Vector3f kd;
-	float ks;
 
 	GLuint vao;
 };

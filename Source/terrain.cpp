@@ -11,20 +11,17 @@ Terrain initializeTerrain() {
 
 	srand(time(0));
 	terrain.seed = rand()%1000000000; //Seed for height generation
-	terrain.size = 400; //Length of the terrain
-	terrain.vertexCount = 64; //Number of vertices in one direction (x or z)
-	terrain.maxHeight = 5.0f; //Maximum height
+	terrain.size = 800; //Length of the terrain
+	terrain.vertexCount = 128; //Number of vertices in one direction (x or z)
+	terrain.maxHeight = 2.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
-	terrain.ka = Vector3f(0.36, 0.25, 0.2);
-	terrain.kd = Vector3f(0.36, 0.5, 0.5);
-	terrain.ks = 8.0f;
 
 	int count = terrain.vertexCount * terrain.vertexCount;
 	for (int i = 0; i < terrain.vertexCount; i++) {
 		std::vector<float> heightX;
 		for (int j = 0; j < terrain.vertexCount; j++) {
-			float height = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight);
+			float height = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight) * terrain.maxHeight;
 			heightX.push_back(height);
 
 			float x_coord = (float)j / ((float)terrain.vertexCount - 1) * terrain.size;
@@ -64,6 +61,8 @@ Terrain initializeTerrain() {
 		}
 	}
 	
+	
+
 	glGenVertexArrays(1, &terrain.vao);
 	glBindVertexArray(terrain.vao);
 
@@ -160,35 +159,33 @@ float interpolate(float a, float b, float blend) {
 	return a * (1.0f - func) + b * func;
 }
 
-float getHeight(float xPos, float zPos, std::vector<std::vector<float>> heights, float size, float vertexCount) {
-	//Calculate grid position
-	float gridSquareSize = size / vertexCount;
-	int gridX = (int)floorf(xPos / gridSquareSize);
-	int gridz = (int)floorf(zPos / gridSquareSize);
-	if (gridX >= heights.size() - 1 || gridz >= heights.size() - 1 || gridX < 0 || gridz < 0) {
-		return 0;
-	}
-	//We know where we are in the grid, now where in this grid tile?
-	float xCoord = fmod(xPos, gridSquareSize) / gridSquareSize;
-	float zCoord = fmod(zPos, gridSquareSize) / gridSquareSize;
-	//Check which triangle and return baryyCentric based height
-	if (xCoord < (1 - zCoord)) { //upper left triangle
-		return barryCentric(Vector3f(0, heights[gridX][gridz], 0), Vector3f(1,
-			heights[gridX + 1][gridz], 0), Vector3f(0,
-				heights[gridX][gridz + 1], 1), Vector2f(xCoord, zCoord));
-	}
-	else { //lower right triangle
-		return barryCentric(Vector3f(1, heights[gridX + 1][gridz], 0), Vector3f(1,
-			heights[gridX + 1][gridz + 1], 1), Vector3f(0,
-				heights[gridX][gridz + 1], 1), Vector2f(xCoord, zCoord));
-	}
-
-}
-
-float barryCentric(Vector3f p1, Vector3f p2, Vector3f p3, Vector2f pos) {
-	float det = (p2.z - p3.z) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.z - p3.z);
-	float l1 = ((p2.z - p3.z) * (pos.x - p3.x) + (p3.x - p2.x) * (pos.y - p3.z)) / det;
-	float l2 = ((p3.z - p1.z) * (pos.x - p3.x) + (p1.x - p3.x) * (pos.y - p3.z)) / det;
-	float l3 = 1.0f - l1 - l2;
-	return l1 * p1.y + l2 * p2.y + l3 * p3.y;
-}
+//float getHeight(float xPos, float zPos, std::vector<std::vector<float>> heights, float size, float vertexCount) {
+//	float gridSquareSize = size / vertexCount;
+//	size/xPos
+//	if (xPos >= heights.size() - 1 || zPos >= heights.size() - 1 || xPos < 0 || zPos < 0) {
+//		return 0;
+//	}
+//	Get the xCoord of the terrain
+//	float xCoord = size / vertexCount * xPos;
+//	float zCoord = size / vertexCount * zPos;
+//	Check which triangle
+//	if (xCoord <= 1 - zCoord) {
+//		barryCentric(Vector3f(0, heights[xPos][zPos], 0), Vector3f(1,
+//			heights[xPos + 1][zPos], 0), Vector3f(0,
+//				heights[xPos][zPos + 1], 1), Vector2f(xCoord, zCoord));
+//	}
+//	else {
+//		barryCentric(Vector3f(1, heights[xPos + 1][zPos], 0), Vector3f(1,
+//			heights[xPos + 1][zPos + 1], 1), Vector3f(0,
+//				heights[xPos][zPos + 1], 1), Vector2f(xCoord, zCoord));
+//	}
+//
+//}
+//
+//float barryCentric(Vector3f p1, Vector3f p2, Vector3f p3, Vector2f pos) {
+//	float det = (p2.z - p3.z) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.z - p3.z);
+//	float l1 = ((p2.z - p3.z) * (pos.x - p3.x) + (p3.x - p2.x) * (pos.y - p3.z)) / det;
+//	float l2 = ((p3.z - p1.z) * (pos.x - p3.x) + (p1.x - p3.x) * (pos.y - p3.z)) / det;
+//	float l3 = 1.0f - l1 - l2;
+//	return l1 * p1.y + l2 * p2.y + l3 * p3.y;
+//}
