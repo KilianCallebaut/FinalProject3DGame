@@ -137,6 +137,127 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
+
+
+class BoundingBox {
+public:
+	/*
+	Vector3f ftr;
+	Vector3f flr;
+	Vector3f ftl;
+	Vector3f fll;
+	Vector3f btr;
+	Vector3f blr;
+	Vector3f btl;
+	Vector3f bll;*/
+	Vector3f vertices[8];
+
+	void calculateBoundingBox(Model m) {
+
+		Vector3f xmax;
+		Vector3f ymax;
+		Vector3f zmax;
+		Vector3f xmin;
+		Vector3f ymin;
+		Vector3f zmin;
+		for (Vector3f a : m.vertices) {
+			if (a.x > xmax.x)
+				xmax = a;
+			if (a.y > ymax.y)
+				ymax = a;
+			if (a.z > zmax.z)
+				zmax = a;
+			if (a.x < xmin.x)
+				//std::cout << xmin << '\n';
+				xmin = a;
+			if (a.y < ymin.y)
+				ymin = a;
+			if (a.z < zmin.z)
+				zmin = a;
+		}
+
+		vertices[0] = Vector3f(xmax.x, ymax.y, zmax.z);
+		vertices[1] = Vector3f(xmax.x, ymin.y, zmax.z);
+		vertices[2] = Vector3f(xmin.x, ymax.y, zmax.z);
+		vertices[3] = Vector3f(xmin.x, ymin.y, zmax.z);
+		vertices[4] = Vector3f(xmax.x, ymax.y, zmin.z);
+		vertices[5] = Vector3f(xmax.x, ymin.y, zmin.z);
+		vertices[6] = Vector3f(xmin.x, ymax.y, zmin.z);
+		vertices[7] = Vector3f(xmin.x, ymin.y, zmin.z);
+	}
+
+	void scale(float s) {
+		for (int i = 0; i < 8; i++) {
+
+			vertices[i] *= s;
+
+		}
+	}
+
+	void translate(Vector3f t) {
+		for (int i = 0; i < 8; i++) {
+
+			vertices[i] += t;
+
+		}
+	}
+
+	void rotate(Vector3f r) {
+		for (int i = 0; i < 8; i++) {
+
+			vertices[i] = Vector3f(vertices[i].x * cosf(r.y) + vertices[i].z * sinf(r.y), vertices[i].y,
+				-vertices[i].x * sinf(r.y) + vertices[i].z * cosf(r.y));;
+		}
+		/*
+		ftr = Vector3f(ftr.x * cosf(r.y) + ftr.z * sinf(r.y), ftr.y,
+			-ftr.x * sinf(r.y) + ftr.z * cosf(r.y));
+		flr = Vector3f(flr.x * cosf(r.y) + flr.z * sinf(r.y), flr.y,
+			-flr.x * sinf(r.y) + flr.z * cosf(r.y));
+		ftl = Vector3f(ftl.x * cosf(r.y) + ftl.z * sinf(r.y), ftl.y,
+			-ftl.x * sinf(r.y) + ftl.z * cosf(r.y));
+		fll = Vector3f(fll.x * cosf(r.y) + fll.z * sinf(r.y), fll.y,
+			-fll.x * sinf(r.y) + fll.z * cosf(r.y));
+		btr = Vector3f(btr.x * cosf(r.y) + btr.z * sinf(r.y), btr.y,
+			-btr.x * sinf(r.y) + btr.z * cosf(r.y));
+		blr = Vector3f(blr.x * cosf(r.y) + blr.z * sinf(r.y), blr.y,
+			-blr.x * sinf(r.y) + blr.z * cosf(r.y));		
+		btl = Vector3f(btl.x * cosf(r.y) + btl.z * sinf(r.y), btl.y,
+			-btl.x * sinf(r.y) + btl.z * cosf(r.y));
+		bll = Vector3f(bll.x * cosf(r.y) + bll.z * sinf(r.y), bll.y,
+			-bll.x * sinf(r.y) + bll.z * cosf(r.y));
+			*/
+	}
+
+	bool intersect(Vector3f point) {
+		float xmax = 0;
+		float ymax = 0;
+		float zmax = 0;
+		float xmin = 0;
+		float ymin = 0;
+		float zmin = 0;
+		for (int i = 0; i < 8; i++) {
+			if (vertices[i].x > xmax)
+				xmax = vertices[i].x;
+			if (vertices[i].y > ymax)
+				ymax = vertices[i].y;
+			if (vertices[i].z > zmax)
+				zmax = vertices[i].z;
+			if (vertices[i].x < xmin)
+				xmin = vertices[i].x;
+			if (vertices[i].y < ymin)
+				ymin = vertices[i].y;
+			if (vertices[i].z < zmin)
+				zmin = vertices[i].z;
+		}
+		std::cout << point << '\n';
+		std::cout << xmax << '\n';
+		std::cout << xmin << '\n';
+		std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
+
+		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
+	}
+};
+
 class Character
 {
 public:
@@ -259,6 +380,7 @@ public:
 	Model Body;
 	Model Arm;
 	float scale = 10.0f;
+	BoundingBox boundingBox;
 
 	Vector3f position;
 	Vector3f rotation;
@@ -312,11 +434,16 @@ public:
 		Arm.kd = Vector3f(0.5, 0, 0);
 		Arm.ks = 8.0f;
 
+		boundingBox = BoundingBox();
+		boundingBox.calculateBoundingBox(Body);
+		
+		boundingBox.translate(pos);
+		boundingBox.rotate(rotation);
+		boundingBox.scale(scale);
 
 	}
 
 	void updateAndroid() {
-		
 		if (shotTarget != Vector3f(0)) {
 			rotateArms();
 			rotateHead();
@@ -334,7 +461,7 @@ public:
 	}
 
 	void rotateArms() {
-
+		
 		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (rarmPosition))));
 		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (larmPosition))));
 
@@ -590,9 +717,10 @@ public:
 			detectHit();
 			android.setTarget(character.position);
 			android.updateAndroid();
+			std::cout << "Intersects: "<< android.boundingBox.intersect(character.position);
 
 			//Set the height to terrain level
-			//float y = getHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			//float y = generateHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
 			//std::cout << y << std::endl;
 
 			shadowShader.bind();
