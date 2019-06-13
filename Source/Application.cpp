@@ -34,7 +34,6 @@
 #endif
 #include <ctime>
 
-
 // Render a cube
 void renderCube(ShaderProgram& shader, const Cube& cube, Vector3f position, Vector3f lightPosition, Vector3f lightColor, Vector3f rotation = Vector3f(0), float scale = 1) {
 	Matrix4f modelMatrix;
@@ -80,9 +79,9 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 float calculatexzRotation(Vector3f dir, Vector3f b) {
 
 	Vector3f xa = dir;
-	Vector3f xb = normalize(Vector3f(b.x,0, b.z));
+	Vector3f xb = normalize(Vector3f(b.x, 0, b.z));
 
-	return -180*(atan2f(1, 0) - atan2f(xb.z, xb.x))/Math::PI;
+	return -180 * (atan2f(1, 0) - atan2f(xb.z, xb.x)) / Math::PI;
 
 }
 
@@ -119,7 +118,6 @@ void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vec
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, image.handle);
 	glBindVertexArray(terrain.vao);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDrawElements(GL_TRIANGLES, terrain.indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
@@ -135,8 +133,6 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
-
-
 class Character
 {
 public:
@@ -145,11 +141,11 @@ public:
 	Model idleFrames[59];
 	Vector3f position;
 	Vector3f rotation;
-	Vector3f direction = Vector3f(0,0,1.0f);
+	Vector3f direction = Vector3f(0, 0, 1.0f);
 
-	float scale = 0.1f;
-	float speed = 0.1f;
-	float rotationspeed = 30.0f * Math::PI/180.0f;
+	float scale = 1.0f;
+	float speed = 1.0f;
+	float rotationspeed = 30.0f * Math::PI / 180.0f;
 
 
 	//mode: 0=still, 1=running
@@ -158,6 +154,7 @@ public:
 	int idlecounter;
 	int runcounter;
 
+	std::string projectPath;
 
 	Model nextFrame()
 	{
@@ -168,8 +165,6 @@ public:
 				idlecounter = 0;
 			return idleFrames[idlecounter];
 		case 1:
-			std::cout << '\n';
-
 			runcounter += 1;
 			if (runcounter == 24)
 				runcounter = 0;
@@ -191,18 +186,20 @@ public:
 
 	void rotate(int left) {
 
-		direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
-			-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
+		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
+			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
 
-		rotation += Vector3f(0,left*rotationspeed * 180 / Math::PI,0);
+		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
 	}
 
-	void initCharacter(Vector3f pos, Vector3f rot = Vector3f(0,0,0))
+	void initCharacter(std::string ppath, Vector3f  pos, Vector3f rot = Vector3f(0, 0, 0))
 	{
+		projectPath = ppath;
+
 		position = pos;
 		rotation = rot;
 
-		std::string base = "Resources\\Models\\Shadowman";
+		std::string base = projectPath + "Resources\\Models\\Shadowman";
 		characterModel = loadModel(base + "\\Shadowman.obj");
 		characterModel.ka = Vector3f(0.1, 0, 0);
 		characterModel.kd = Vector3f(0.5, 0, 0);
@@ -247,38 +244,54 @@ public:
 	Model Head;
 	Model Body;
 	Model Arm;
+	float scale = 10.0f;
 
 	Vector3f position;
 	Vector3f rotation;
 
 	//head
 	Vector3f headRotation;
-	Vector3f headPosition = Vector3f(0, 2.8f, 0);
+	Vector3f headPosition = Vector3f(scale * 0, scale*2.8f, scale * 0);
 
 	//arms
 	Vector3f larmRotation;
 	Vector3f rarmRotation;
-	Vector3f larmPosition = Vector3f(1.4f, 1.5, 0);
-	Vector3f rarmPosition = Vector3f(-1.4f, 1.5, 0);
+	Vector3f larmPosition = Vector3f(scale*1.4f, scale*1.5, scale * 0);
+	Vector3f rarmPosition = Vector3f(scale*-1.4f, scale*1.5, scale * 0);
 
+	bool shooting = false;
+	Vector3f shotTarget;
+	bool timerS = false;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> timer;
+
+	//projectiles
+	float p_speed = 0.5f;
+
+	//General
 	Vector3f direction = Vector3f(0, 0, 1.0f);
+	std::string projectPath;
+	
 
-	void initAndroid(Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0,0,0), Vector3f headRot = Vector3f(0,0,0)) {
+	void initAndroid(std::string path, Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0, 0, 0), Vector3f headRot = Vector3f(0, 0, 0)) {
+		projectPath = path;
+
 		position = pos;
+		larmPosition += pos;
+		rarmPosition += pos;
 		rotation = rot;
 		larmRotation = armRot;
 		rarmRotation = armRot;
 		headRotation = headRot;
 
-		Head = loadModel("Resources\\Models\\Android\\android_head.obj");
+		Head = loadModel(projectPath + "Resources\\Models\\Android\\android_head.obj");
 		Head.ka = Vector3f(0.1, 0, 0);
 		Head.kd = Vector3f(0.5, 0, 0);
 		Head.ks = 8.0f;
-		Body = loadModel("Resources\\Models\\Android\\android_body.obj");
+		Body = loadModel(projectPath + "Resources\\Models\\Android\\android_body.obj");
 		Body.ka = Vector3f(0.1, 0, 0);
 		Body.kd = Vector3f(0.5, 0, 0);
 		Body.ks = 8.0f;
-		Arm = loadModel("Resources\\Models\\Android\\android_arm.obj");
+		Arm = loadModel(projectPath + "Resources\\Models\\Android\\android_arm.obj");
 		Arm.ka = Vector3f(0.1, 0, 0);
 		Arm.kd = Vector3f(0.5, 0, 0);
 		Arm.ks = 8.0f;
@@ -288,8 +301,8 @@ public:
 
 	void rotateArms(Vector3f target) {
 
-		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + rarmPosition))));
-		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + larmPosition))));
+		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (rarmPosition))));
+		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (larmPosition))));
 
 		//std::cout << armRotation <<'\n';
 		//armRotation += Vector3f(0.5f, 0, 0);
@@ -299,17 +312,55 @@ public:
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 
-	void rotateHead() {
+	void rotateHead(Vector3f target) {
 
-		headRotation += Vector3f(0, 0.5f, 0);
+		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + headPosition))), 0);
 		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
 		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
+
+	void shootArms(Vector3f target) {
+
+		if (!timerS && !shooting) {
+			timer = std::chrono::system_clock::now() + std::chrono::seconds(3);
+			timerS = true;
+		}
+
+		if (timerS && std::chrono::system_clock::now() > timer) {
+			shooting = true;
+			shotTarget = target;
+			timerS = false;
+		}
+	}
+
+	Vector3f armPosition(bool larm) {
+		if (shooting) {
+			if (larm) {
+				larmPosition -= normalize((larmPosition)-shotTarget)*p_speed;
+				return larmPosition;
+			}
+			else {
+				rarmPosition -= normalize((rarmPosition)-shotTarget)*p_speed;
+				return rarmPosition;
+			}
+		}
+		else {
+			if (larm) {
+				return larmPosition;
+			}
+			else {
+				return rarmPosition;
+			}
+		}
+	}
+
+	void resetArms() {
+		larmPosition = Vector3f(scale*1.4f, scale*1.5, scale * 0) + position;
+		rarmPosition = Vector3f(scale*-1.4f, scale*1.5, scale * 0) + position;
+	}
 };
-
-
 
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
@@ -337,60 +388,63 @@ public:
 		projMatrix[15] = 1.0f;
 	}
 
-    void init() {
-        width = window.getWidth();
-    	height = window.getHeight();
-        window.setGlVersion(3, 3, true);
-        window.create("Final Project", SCR_WIDTH, SCR_HEIGHT);
+	void init() {
+		if (emielPC) {
+			projectPath = "C:\\users\\Emiel\\Develop\\FinalProject3DGame\\";
+		}
 
-        window.addKeyListener(this);
-        window.addMouseMoveListener(this);
-        window.addMouseClickListener(this);
+		width = window.getWidth();
+		height = window.getHeight();
+		window.setGlVersion(3, 3, true);
 
+		window.create("Final Project", SCR_WIDTH, SCR_HEIGHT);
 
-		// Light init pos.
-		lightPosition = Vector3f(-20, 20, -20);
-		lightColor = Vector3f(1, 1, 1); //White
+		window.addKeyListener(this);
+		window.addMouseMoveListener(this);
+		window.addMouseClickListener(this);
 
-		//Init surface
-		rockyTerrain = loadImage("C:/users/Emiel/Develop/FinalProject3DGame/Resources/rockyTerrain.jpg");
-		terrain = initializeTerrain();
+		//Create shaders
+		try {
+			defaultShader.create();
+			defaultShader.addShader(VERTEX, projectPath + "Resources\\shader.vert");
+			defaultShader.addShader(FRAGMENT, projectPath + "Resources\\shader.frag");
+			defaultShader.build();
 
-		setupCoordSystem();
-		setupShadowFrameBuffer();
+			blinnPhong.create();
+			blinnPhong.addShader(VERTEX, projectPath + "Resources\\blinnphong.vert");
+			blinnPhong.addShader(FRAGMENT, projectPath + "Resources\\blinnphong.frag");
+			blinnPhong.build();
 
-    		try {
-                defaultShader.create();
-                defaultShader.addShader(VERTEX, "Resources//shader.vert");
-                defaultShader.addShader(FRAGMENT, "Resources//shader.frag");
-                defaultShader.build();
+			terrainShader.create();
+			terrainShader.addShader(VERTEX, projectPath + "Resources\\terrain.vert");
+			terrainShader.addShader(FRAGMENT, projectPath + "Resources\\terrain.frag");
+			terrainShader.build();
 
-          			blinnPhong.create();
-          			blinnPhong.addShader(VERTEX, "Resources//blinnphong.vert");
-          			blinnPhong.addShader(FRAGMENT, "Resources//blinnphong.frag");
-          			blinnPhong.build();
-
-								terrainShader.create();
-								terrainShader.addShader(VERTEX, "Resources//terrain.vert");
-								terrainShader.addShader(FRAGMENT, "Resources//terrain.frag");
-								terrainShader.build();
-
-                shadowShader.create();
-                shadowShader.addShader(VERTEX, "Resources//shadow.vert");
-                shadowShader.build();
-
-                // Any new shaders can be added below in similar fashion
-                // ....
-        }
-        catch (ShaderLoadingException e) {
-            std::cerr << e.what() << std::endl;
-        }
-
+			shadowShader.create();
+			shadowShader.addShader(VERTEX, projectPath + "Resources\\shadow.vert");
+			shadowShader.build();
+		}
+		catch (ShaderLoadingException e) {
+			std::cerr << e.what() << std::endl;
+		}
 		projMatrix = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
-		//viewMatrix = lookAtMatrix(Vector3f(-20,20,-20), Vector3f(), Vector3f(0, 1.0f, 0));
-		viewMatrix = lookAtMatrix(Vector3f(0,5,-5), Vector3f(), Vector3f(0, 1.0f, 0));
+		Vector3f initPos = Vector3f(0, 40, -40);
+		viewMatrix = lookAtMatrix(initPos, Vector3f(), Vector3f(0, 1.0f, 0));
+		viewPosition = initPos;
+		viewRotation = initPos;
 
 		//Init shaders.
+		// Correspond the OpenGL texture units 0 and 1 with the
+		// colorMap and shadowMap uniforms in the shader
+		blinnPhong.bind();
+		blinnPhong.uniform1i("colorMap", 0);
+		blinnPhong.uniform1i("shadowMap", 1);
+
+		// Upload the projection matrix once, if it doesn't change
+		// during the game we don't need to reupload it
+		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
+
+		//Same for the other shaders.
 		defaultShader.bind();
 		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
 
@@ -399,59 +453,54 @@ public:
 		terrainShader.uniform1i("depthMap", 1);
 		terrainShader.uniformMatrix4f("projMatrix", projMatrix);
 
-		// Correspond the OpenGL texture units 0 and 1 with the
-        // colorMap and shadowMap uniforms in the shader
-    	blinnPhong.bind();
-    	blinnPhong.uniform1i("colorMap", 0);
-    	blinnPhong.uniform1i("shadowMap", 1);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
-        // Upload the projection matrix once, if it doesn't change
-        // during the game we don't need to reupload it
-    	blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
-        glEnable(GL_DEPTH_TEST);
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+		// Initialize light position and color.
+		lightPosition = Vector3f(-200, 200, -200);
+		lightColor = Vector3f(1, 1, 1); //White
 
-    	//Init models
-    	tmp = loadModel("Resources\\Models\\Housev2.obj");
-    	tmp.ka = Vector3f(0.1, 0, 0);
-    	tmp.kd = Vector3f(0.5, 0, 0);
-    	tmp.ks = 8.0f;
+		//Init surface
+		rockyTerrain = loadImage(projectPath + "Resources\\rockyTerrain.jpg");
+		terrain = initializeTerrain();
 
-			cube_01 = loadCube();
-			cube_01.ka = Vector3f(0, 0.5, 0.5);
-			cube_01.kd = Vector3f(0, 0, 0.1);
-			cube_01.ks = 4.0f;
+		//Setup coordsystem (for debugging) and shadowFrameBuffer for depth map
+		setupCoordSystem();
+		setupShadowFrameBuffer();
 
-			cube_02 = loadCube();
-			cube_02.ka = Vector3f(0, 0.5, 0.5);
-			cube_02.kd = Vector3f(0, 0, 0.1);
-			cube_02.ks = 4.0f;
+		//Init models
+		tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
+		tmp.ka = Vector3f(0.1, 0.1, 0.1);
+		tmp.kd = Vector3f(0, 0.1, 0);
+		tmp.ks = 8.0f;
 
-		/*
-		tmp2 = loadModel("Resources\\Models\\Android\\android_head.obj");
-		tmp2.ka = Vector3f(0.1, 0, 0);
-		tmp2.kd = Vector3f(0.5, 0, 0);
-		tmp2.ks = 8.0f;*/
+		//Init boss
 		android = Android();
-		android.initAndroid(Vector3f(0, 0, 5.0f));
-
+		android.initAndroid(projectPath, Vector3f(0, 0, 5.0f));
 
 		//Init character
 		character = Character();
-		character.initCharacter(Vector3f(0, 0, 0));
+		character.initCharacter(projectPath, Vector3f(0, 0, 0));
 
-    }
+		cube_01 = loadCube();
+		cube_01.ka = Vector3f(0, 0.5, 0.5);
+		cube_01.kd = Vector3f(0, 0, 0.1);
+		cube_01.ks = 4.0f;
 
-    void update() {
-        // This is your game loop
-        // Put your real-time logic and rendering in here
+		cube_02 = loadCube();
+		cube_02.ka = Vector3f(0, 0.5, 0.5);
+		cube_02.kd = Vector3f(0, 0, 0.1);
+		cube_02.ks = 4.0f;
+	}
+
+	void update() {
+		// This is your game loop
+		// Put your real-time logic and rendering in here
 		std::chrono::system_clock::time_point a = std::chrono::system_clock::now();
 		std::chrono::system_clock::time_point b = std::chrono::system_clock::now();
 
-
-        while (!window.shouldClose()) {
-
-
+		while (!window.shouldClose()) {
+			//Framerate management
 			a = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> work_time = a - b;
 			if (work_time.count() < 30.0)
@@ -463,31 +512,44 @@ public:
 			b = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> sleep_time = b - a;
 
-            // Clear the screen
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			viewMatrix.translate(Vector3f(side, up, forward));
+			// Clear the screen
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			viewMatrix.translate(Vector3f(side, 0, forward));
 			rotateCamera();
+
+			//Get viewposition
 			Matrix4f inv = inverse(viewMatrix);
 			Vector3f viewPos = Vector3f(inv[12], inv[13], inv[14]);
 
 			//shadow
 			//Orthographic from light point of view
 			Matrix4f lightProjectionMatrix = orthographic(nn, ff, SHADOW_WIDTH, SHADOW_HEIGHT);
-			Matrix4f lightViewMatrix = lookAtMatrix(lightPosition, Vector3f(0,0,0), Vector3f(0, 1, 0));
+			Matrix4f lightViewMatrix = lookAtMatrix(lightPosition, Vector3f(0, 0, 0), Vector3f(0, 1, 0));
 			Matrix4f lightSpaceMatrix = lightProjectionMatrix * lightViewMatrix;
 
-
+			//Get the next model of the character
+			Model charFrame = character.nextFrame();
+			//Set the height to terrain level
+			//float y = getHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			//std::cout << y << std::endl;
 
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
 			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-				glClear(GL_DEPTH_BUFFER_BIT);
-				//render whole scene for only depthmap
-				renderCube(shadowShader, cube_01, Vector3f(1, 1, 3), lightPosition, lightColor);
-				renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
-				drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
-				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
+			glClear(GL_DEPTH_BUFFER_BIT);
+			//render whole scene for only depthmap
+			renderCube(shadowShader, cube_01, Vector3f(5, 1, 5), lightPosition, lightColor);
+			renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
+			//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+
+			drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
+			drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
+			drawModel(shadowShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
+			drawModel(shadowShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
+			drawModel(shadowShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
+
+			drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -498,18 +560,17 @@ public:
 
 			blinnPhong.uniform1f("time", glfwGetTime());
 			blinnPhong.uniform3f("viewPos", viewPos);
-			drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
-			renderCube(blinnPhong, cube_02, Vector3f(1, 1, 3), lightPosition, lightColor);
-			renderCube(blinnPhong, cube_01, Vector3f(3, 1, 1), lightPosition, lightColor);
-
-			drawModel(blinnPhong, character.nextFrame(), character.position, lightPosition, lightColor, character.rotation, character.scale);
-
-			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-			drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-			drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+			//drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+			//renderCube(blinnPhong, cube_02, Vector3f(1, 1, 3), lightPosition, lightColor);
+			//renderCube(blinnPhong, cube_01, Vector3f(3, 1, 1), lightPosition, lightColor);
+			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
+			drawModel(blinnPhong, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
+			drawModel(blinnPhong, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
+			drawModel(blinnPhong, android.Arm, android.armPosition(true) , lightPosition, lightColor, android.larmRotation, android.scale);
+			drawModel(blinnPhong, android.Arm, android.armPosition(false) , lightPosition, lightColor, android.rarmRotation, android.scale);
 			android.rotateArms(character.position);
-			android.rotateHead();
+			android.rotateHead(character.position);
+			android.shootArms(character.position);
 
 			terrainShader.bind();
 			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -528,15 +589,16 @@ public:
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
 			}
+			viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
 
 			// Processes input and swaps the window buffer
-            window.update();
-          }
-        }
+			window.update();
+
+		}
 
 		glDeleteFramebuffers(1, &depthMapFBO);
 
-    }
+	}
 
 	//Setup the framebuffer that calculates the shadow from the one light point
 	void setupShadowFrameBuffer() {
@@ -610,10 +672,10 @@ public:
 		return matrix;
 	}
 
-    // In here you can handle key presses
-    // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
-    // mods - Any modifier keys pressed, like shift or control
-    void onKeyPressed(int key, int mods) {
+	// In here you can handle key presses
+	// key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
+	// mods - Any modifier keys pressed, like shift or control
+	void onKeyPressed(int key, int mods) {
 		std::cout << "Key pressed: " << key << std::endl;
 		switch (key) {
 		case GLFW_KEY_W:
@@ -656,26 +718,23 @@ public:
 			character.rotate(-1);
 			break;
 		case GLFW_KEY_C:
-				showCoord = !showCoord;
-				break;
-		case GLFW_KEY_V:
-				drawterrain = !drawterrain;
-				break;
+			showCoord = !showCoord;
+			break;
 		case GLFW_KEY_B:
-				drawTestModel = !drawTestModel;
-				break;
+			drawTestModel = !drawTestModel;
+			break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
 			break;
 		}
-    }
+	}
 
-    // In here you can handle key releases
-    // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
-    // mods - Any modifier keys pressed, like shift or control
+	// In here you can handle key releases
+	// key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
+	// mods - Any modifier keys pressed, like shift or control
 
-    void onKeyReleased(int key, int mods)
-    {
+	void onKeyReleased(int key, int mods)
+	{
 		switch (key) {
 		case GLFW_KEY_W:
 			//forward
@@ -701,67 +760,75 @@ public:
 			//pan down
 			up -= step;
 			break;
+		case GLFW_KEY_Q:
+			angle -= cam_rot_sp;
+			break;
+		case GLFW_KEY_E:
+			angle += cam_rot_sp;
+			break;
 		case GLFW_KEY_SPACE:
 			character.run();
 			break;
 		}
-    }
+	}
 
-    // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
-    void onMouseMove(float x, float y) {
-       std::cout << "Mouse at position: " << x << " " << y << std::endl;
-    }
+	// If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
+	void onMouseMove(float x, float y) {
+		//std::cout << "Mouse at position: " << x << " " << y << std::endl;
+	}
 
-    // If one of the mouse buttons is pressed this function will be called
-    // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
-    // mods - Any modifier buttons pressed
-    void onMouseClicked(int button, int mods) {
-        std::cout << "Pressed button: " << button << std::endl;
+	// If one of the mouse buttons is pressed this function will be called
+	// button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
+	// mods - Any modifier buttons pressed
+	void onMouseClicked(int button, int mods) {
+		std::cout << "Pressed button: " << button << std::endl;
 
-    }
+	}
 
-    // If one of the mouse buttons is released this function will be called
-    // button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
-    // mods - Any modifier buttons pressed
-    void onMouseReleased(int button, int mods) {
+	// If one of the mouse buttons is released this function will be called
+	// button - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__buttons.html
+	// mods - Any modifier buttons pressed
+	void onMouseReleased(int button, int mods) {
 
-    }
+	}
 
 	void rotateCamera() {
 		Vector3f direction = viewRotation;
 		float radAngle = angle * Math::PI / 180.f;
-		viewRotation = Vector3f(direction.x*cosf((float)radAngle) + direction.z*sinf((float)radAngle), direction.y,
-			-direction.x*sinf((float)radAngle) + direction.z*cosf((float)radAngle));
+		viewRotation = Vector3f(direction.x * cosf((float)radAngle) + direction.z * sinf((float)radAngle), direction.y,
+			-direction.x * sinf((float)radAngle) + direction.z * cosf((float)radAngle));
 	}
 
+
 private:
-    Window window;
+	Window window;
 
-    // Shader for default rendering and for depth rendering
-    ShaderProgram defaultShader;
-    ShaderProgram shadowShader;
-    ShaderProgram blinnPhong;
-    ShaderProgram terrainShader;
+	// Shader for default rendering and for depth rendering
+	ShaderProgram defaultShader;
+	ShaderProgram shadowShader;
+	ShaderProgram blinnPhong;
+	ShaderProgram terrainShader;
 
-    // Projection and view matrices for you to fill in and use
-    Matrix4f projMatrix;
+	// Projection and view matrices for you to fill in and use
+	Matrix4f projMatrix;
 
-    Matrix4f viewMatrix;
+	Matrix4f viewMatrix;
 	Vector3f viewPosition;
 	Vector3f viewRotation;
 	bool cameraFollow = 1;
 
-	//Only use this if one static light.
 	Vector3f lightPosition;
 	Vector3f lightColor;
 
 	// Screen/shadow width and height
 	const int SCR_WIDTH = 1024;
 	const int SCR_HEIGHT = 1024;
-	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 
 	//Coordinate system stuff
 	unsigned int coordVAO;
+	unsigned int coordVBO;
+
 	bool showCoord = 0;
 
 	//Projection matrix stuff
@@ -776,21 +843,7 @@ private:
 	float nn = 0.1f;
 	float ff = 1000.0f;
 	float step = 0.01f;
-	float cam_rot_sp = 0.1f;
-
-	//Vertices and texture coordinates for the terrain/water
-	int NbVertX = 2, NbVertY = 2;
-	//vertices
-	std::vector<float> SurfaceVertices3f;
-	//normals
-	std::vector<float> SurfaceNormals3f;
-	//colors
-	std::vector<float> SurfaceColors3f;
-	//tex coords
-	std::vector<float> SurfaceTexCoords2f;
-	//triangle indices (three successive entries: n1, n2, n3 represent a triangle, each n* is an index representing a vertex.)
-	std::vector<unsigned int> SurfaceTriangles3ui;
-	GLuint terrainVAO;
+	float cam_rot_sp = 0.5f;
 
 	//shadow
 	GLuint depthMapFBO;
@@ -798,7 +851,6 @@ private:
 
 	//Terrain
 	Terrain terrain;
-	bool drawterrain = 0;
 
 	//Images
 	Image rockyTerrain;
@@ -814,17 +866,14 @@ private:
 	Android android;
 	bool drawTestModel = 0;
 
-	unsigned int cubeVAO = 0;
-	unsigned int cubeVBO = 0;
+	std::string projectPath = "";
+	bool emielPC = 0;
 };
 
+int main() {
+	Application app;
+	app.init();
+	app.update();
 
-
-int main()
-{
-    Application app;
-    app.init();
-    app.update();
-
-    return 0;
+	return 0;
 }

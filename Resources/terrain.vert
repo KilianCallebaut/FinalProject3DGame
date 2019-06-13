@@ -26,7 +26,7 @@ void main() {
     vs_out.FragPos = (modelMatrix * position).xyz;
 	//vs_out.Normal = (modelMatrix * vec4(normal, 0)).xyz;
     vs_out.Normal = transpose(inverse(mat3(modelMatrix))) * normal;
-    vs_out.TexCoords = texCoord;// * 30; //resolution up
+    vs_out.TexCoords = texCoord; //resolution up: scale with an int
     vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);
     gl_Position = projMatrix * viewMatrix * modelMatrix * position;
 //	passPosition = (position).xyz;
