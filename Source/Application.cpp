@@ -813,6 +813,7 @@ public:
 			//Get viewposition
 			Matrix4f inv = inverse(viewMatrix);
 			Vector3f viewPos = Vector3f(inv[12], inv[13], inv[14]);
+
 			//shadow
 			//Orthographic from light point of view
 			Matrix4f lightProjectionMatrix = orthographic(nn, ff, SHADOW_WIDTH, SHADOW_HEIGHT);
