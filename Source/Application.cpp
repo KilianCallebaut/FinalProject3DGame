@@ -47,6 +47,7 @@ void renderCube(ShaderProgram& shader, const Cube& cube, Vector3f position, Vect
 	shader.uniform1f("ks", cube.ks);
 	shader.uniform3f("ka", cube.ka);
 	shader.uniform3f("kd", cube.kd);
+	shader.uniform1i("texCoordScale", 1);
 
 	// render Cube
 	glBindVertexArray(cube.vao);
@@ -69,7 +70,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 	shader.uniform1f("ks", model.ks);
 	shader.uniform3f("ka", model.ka);
 	shader.uniform3f("kd", model.kd);
-
+	shader.uniform1f("texCoordScale", 1);
     glBindVertexArray(model.vao);
     glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
 	glBindVertexArray(0);
@@ -119,6 +120,7 @@ void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vec
 	shader.uniform1f("ks", terrain.ks);
 	shader.uniform3f("ka", terrain.ka);
 	shader.uniform3f("kd", terrain.kd);
+	shader.uniform1f("texCoordScale", 20);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, image.handle);
 	glBindVertexArray(terrain.vao);
@@ -350,6 +352,11 @@ public:
 			blinnPhong.addShader(FRAGMENT, projectPath + "Resources\\blinnphong.frag");
 			blinnPhong.build();
 
+			toonShader.create();
+			toonShader.addShader(VERTEX, projectPath + "Resources\\toon.vert");
+			toonShader.addShader(FRAGMENT, projectPath + "Resources\\toon.frag");
+			toonShader.build();
+
 			shadowShader.create();
 			shadowShader.addShader(VERTEX, projectPath + "Resources\\shadow.vert");
 			shadowShader.build();
@@ -373,6 +380,11 @@ public:
 		// Upload the projection matrix once, if it doesn't change
 		// during the game we don't need to reupload it
 		blinnPhong.uniformMatrix4f("projMatrix", projMatrix);
+		
+		toonShader.bind();
+		toonShader.uniform1i("colorMap", 0);
+		toonShader.uniform1i("depthMap", 1);
+		toonShader.uniformMatrix4f("projMatrix", projMatrix);
 
 		//Same for the other shaders.
 		defaultShader.bind();
@@ -383,7 +395,7 @@ public:
 
 		// Initialize light position and color.
 		lightPosition = Vector3f(-200, 200, -200);
-		lightColor = Vector3f(1, 1, 1); //White
+		lightColor = Vector3f(0.945, 0.855, 0.643); //Sunlight
 
 		//Init surface
 		rockyTerrain = loadImage(projectPath + "Resources\\rockyTerrain.jpg");
@@ -457,7 +469,12 @@ public:
 
 			//Set the height to terrain level (terrain collision detection)
 			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			std::cout << y << " - ";
 			character.setYPosition(y);
+			std::cout << character.position << std::endl;
+			float yBoss = getHeight(200, 200, terrain.heights, terrain.size, terrain.vertexCount);
+			Vector3f bossPosition = Vector3f(200, yBoss, 200);
+
 
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
@@ -469,10 +486,10 @@ public:
 				renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
 				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-				drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0));
-				drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-				drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-				drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+				drawModel(shadowShader, android.Body, bossPosition, lightPosition, lightColor, Vector3f(0));
+				drawModel(shadowShader, android.Head, android.headPosition + bossPosition, lightPosition, lightColor, android.headRotation);
+				drawModel(shadowShader, android.Arm, android.larmPosition + bossPosition, lightPosition, lightColor, android.larmRotation);
+				drawModel(shadowShader, android.Arm, android.rarmPosition + bossPosition, lightPosition, lightColor, android.rarmRotation);
 				
 				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0), lightPosition, lightColor);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -492,15 +509,18 @@ public:
 			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
 			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
 			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0));
-			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-			drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-			drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
+
+			toonShader.bind();
+			toonShader.uniformMatrix4f("viewMatrix", viewMatrix);
+			toonShader.uniform3f("viewPos", viewPos);
+			toonShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
+			drawModel(toonShader, android.Body, bossPosition , lightPosition, lightColor, Vector3f(0), 10);
+			drawModel(toonShader, android.Head, android.headPosition + bossPosition, lightPosition, lightColor, android.headRotation, 10);
+			drawModel(toonShader, android.Arm, android.larmPosition + bossPosition, lightPosition, lightColor, android.larmRotation, 10);
+			drawModel(blinnPhong, android.Arm, android.rarmPosition + bossPosition, lightPosition, lightColor, android.rarmRotation, 10);
 			android.rotateArms(character.position);
 			android.rotateHead();
-
-			
-			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
 	
 			if (showCoord) {
 				defaultShader.bind();
@@ -717,6 +737,7 @@ private:
 	ShaderProgram defaultShader;
 	ShaderProgram shadowShader;
 	ShaderProgram blinnPhong;
+	ShaderProgram toonShader;
 
 	// Projection and view matrices for you to fill in and use
 	Matrix4f projMatrix;

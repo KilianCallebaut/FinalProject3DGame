@@ -11,7 +11,6 @@ uniform vec3 viewPos;
 uniform vec3 kd;
 uniform vec3 ka;
 uniform float ks;
-uniform float texCoordScale;
 
 in vec4 position;
 in vec3 normal;
@@ -35,7 +34,7 @@ out float passks;
 void main() {
     vs_out.FragPos = (modelMatrix * position).xyz;
     vs_out.Normal = transpose(inverse(mat3(modelMatrix))) * normal;
-    vs_out.TexCoords = texCoord * texCoordScale; //resolution up: scale with an int
+    vs_out.TexCoords = texCoord; //resolution up: scale with an int
     vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);
     gl_Position = projMatrix * viewMatrix * modelMatrix * position;
 

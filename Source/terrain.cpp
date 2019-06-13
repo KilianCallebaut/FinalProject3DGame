@@ -12,12 +12,12 @@ Terrain initializeTerrain() {
 	srand(time(0));
 	terrain.seed = rand()%1000000000; //Seed for height generation
 	terrain.size = 800; //Length of the terrain
-	terrain.vertexCount = 128; //Number of vertices in one direction (x or z)
+	terrain.vertexCount = 64; //Number of vertices in one direction (x or z)
 	terrain.maxHeight = 15.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
 	terrain.ka = Vector3f(0.36, 0.25, 0.2);
-	terrain.kd = Vector3f(0.36, 0.25, 0.2);
+	terrain.kd = Vector3f(0.36, 0.5, 0.5);
 	terrain.ks = 8.0f;
 
 	int count = terrain.vertexCount * terrain.vertexCount;
@@ -172,7 +172,7 @@ float getHeight(float xPos, float zPos, std::vector<std::vector<float>> heights,
 	float xCoord = fmod(xPos, gridSquareSize) / gridSquareSize;
 	float zCoord = fmod(zPos, gridSquareSize) / gridSquareSize;
 	//Check which triangle and return baryyCentric based height
-	if (xCoord <= (1 - zCoord)) { //upper left triangle
+	if (xCoord < (1 - zCoord)) { //upper left triangle
 		return barryCentric(Vector3f(0, heights[gridX][gridz], 0), Vector3f(1,
 			heights[gridX + 1][gridz], 0), Vector3f(0,
 				heights[gridX][gridz + 1], 1), Vector2f(xCoord, zCoord));
