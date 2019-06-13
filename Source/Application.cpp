@@ -137,8 +137,6 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
-
-
 class BoundingBox {
 public:
 	/*
@@ -184,29 +182,37 @@ public:
 		vertices[5] = Vector3f(xmax.x, ymin.y, zmin.z);
 		vertices[6] = Vector3f(xmin.x, ymax.y, zmin.z);
 		vertices[7] = Vector3f(xmin.x, ymin.y, zmin.z);
+		
 	}
 
 	void scale(float s) {
 		for (int i = 0; i < 8; i++) {
-
+			//std::cout << "scale" << vertices[i] << '\n';
 			vertices[i] *= s;
+			//std::cout << vertices[i] << '\n';
+
 
 		}
 	}
 
 	void translate(Vector3f t) {
 		for (int i = 0; i < 8; i++) {
+			//std::cout << "tran" << vertices[i] << '\n';
 
 			vertices[i] += t;
+			//std::cout << vertices[i] << '\n';
 
 		}
 	}
 
 	void rotate(Vector3f r) {
 		for (int i = 0; i < 8; i++) {
+			//std::cout << "rot" << vertices[i] << '\n';
 
 			vertices[i] = Vector3f(vertices[i].x * cosf(r.y) + vertices[i].z * sinf(r.y), vertices[i].y,
-				-vertices[i].x * sinf(r.y) + vertices[i].z * cosf(r.y));;
+				-vertices[i].x * sinf(r.y) + vertices[i].z * cosf(r.y));
+			//std::cout << vertices[i] << '\n';
+
 		}
 		/*
 		ftr = Vector3f(ftr.x * cosf(r.y) + ftr.z * sinf(r.y), ftr.y,
@@ -264,6 +270,7 @@ public:
 	Model characterModel;
 	Model runFrames[24];
 	Model idleFrames[59];
+	BoundingBox boundingBox;
 	Vector3f position;
 	Vector3f rotation;
 	Vector3f direction = Vector3f(0, 0, 1.0f);
@@ -282,44 +289,6 @@ public:
 
 	std::string projectPath;
 
-	Model nextFrame()
-	{
-		switch (mode) {
-		case 0:
-			idlecounter += 1;
-			if (idlecounter == 59)
-				idlecounter = 0;
-			return idleFrames[idlecounter];
-		case 1:
-			runcounter += 1;
-			if (runcounter == 24)
-				runcounter = 0;
-			position += direction * speed;
-			return runFrames[runcounter];
-		case 2:
-			return characterModel;
-		}
-	}
-
-	void run() {
-		switch (mode) {
-		case 0:
-			mode = 1;
-			break;
-		case 1:
-			mode = 0;
-			break;
-		}
-	}
-
-	void rotate(int left) {
-
-		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
-			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
-
-		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
-	}
-
 	void initCharacter(std::string ppath, Vector3f  pos, Vector3f rot = Vector3f(0, 0, 0))
 	{
 		projectPath = ppath;
@@ -332,6 +301,9 @@ public:
 		characterModel.ka = Vector3f(0.1, 0, 0);
 		characterModel.kd = Vector3f(0.5, 0, 0);
 		characterModel.ks = 8.0f;
+		boundingBox = BoundingBox();
+		boundingBox.calculateBoundingBox(characterModel);
+
 		for (int i = 0; i < 24; i++) {
 			std::string number;
 			if (i < 9) {
@@ -366,6 +338,55 @@ public:
 
 	}
 
+	Model nextFrame()
+	{
+		boundingBox.scale(scale);
+		boundingBox.translate(position);
+		boundingBox.rotate(rotation);
+		switch (mode) {
+		case 0:
+			idlecounter += 1;
+			if (idlecounter == 59)
+				idlecounter = 0;
+			return idleFrames[idlecounter];
+		case 1:
+			runcounter += 1;
+			if (runcounter == 24)
+				runcounter = 0;
+			move();
+			return runFrames[runcounter];
+		case 2:
+			return characterModel;
+		}
+	}
+
+	void run() {
+		switch (mode) {
+		case 0:
+			mode = 1;
+			break;
+		case 1:
+			mode = 0;
+			break;
+		}
+	}
+
+	void move() {
+		position += direction * speed;
+	}
+
+	void back() {
+		position -= direction * speed;
+	}
+
+	void rotate(int left) {
+
+		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
+			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
+
+		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
+	}
+
 	void die() {
 		if (mode != 2) {
 			rotation += Vector3f(90, 0, 0);
@@ -395,6 +416,7 @@ public:
 	Vector3f larmPosition = Vector3f(scale*1.4f, scale*1.5, scale * 0);
 	Vector3f rarmPosition = Vector3f(scale*-1.4f, scale*1.5, scale * 0);
 
+	Vector3f lookTarget;
 	bool shooting = false;
 	Vector3f shotTarget;
 	bool timerS = false;
@@ -437,17 +459,21 @@ public:
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(Body);
 		
+		boundingBox.scale(scale);
 		boundingBox.translate(pos);
 		boundingBox.rotate(rotation);
-		boundingBox.scale(scale);
 
 	}
 
-	void updateAndroid() {
-		if (shotTarget != Vector3f(0)) {
+	void updateAndroid(Vector3f target) {
+		lookTarget = target;
+		if (lookTarget != Vector3f(0)) {
 			rotateArms();
 			rotateHead();
 			shootArms();
+		}
+		if (!shooting) {
+			shotTarget = lookTarget;
 		}
 
 		if (shooting && shotDone()) {
@@ -475,7 +501,7 @@ public:
 
 	void rotateHead() {
 
-		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (position + headPosition))), 0);
+		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(lookTarget - (position + headPosition))), 0);
 		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
 		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
@@ -715,9 +741,12 @@ public:
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
 			detectHit();
-			android.setTarget(character.position);
-			android.updateAndroid();
-			std::cout << "Intersects: "<< android.boundingBox.intersect(character.position);
+			android.updateAndroid(character.position);
+			if (android.boundingBox.intersect(character.position)) {
+				character.back();
+			}
+			
+			//std::cout << "Intersects: "<< android.boundingBox.intersect(character.position);
 
 			//Set the height to terrain level
 			//float y = generateHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
@@ -789,9 +818,13 @@ public:
 	}
 
 	void detectHit() {
-		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
+		if (character.boundingBox.intersect(android.larmPosition) || character.boundingBox.intersect(android.rarmPosition)) {
 			character.die();
 		}
+		/*
+		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
+			character.die();
+		}*/
 	}
 
 	//Setup the framebuffer that calculates the shadow from the one light point
