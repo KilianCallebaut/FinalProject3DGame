@@ -11,9 +11,9 @@ Terrain initializeTerrain() {
 
 	srand(time(0));
 	terrain.seed = rand()%1000000000; //Seed for height generation
-	terrain.size = 800; //Length of the terrain
-	terrain.vertexCount = 128; //Number of vertices in one direction (x or z)
-	terrain.maxHeight = 2.0f; //Maximum height
+	terrain.size = 400; //Length of the terrain
+	terrain.vertexCount = 64; //Number of vertices in one direction (x or z)
+	terrain.maxHeight = 5.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
 	terrain.ka = Vector3f(0.72, 0.5, 0.4);
@@ -24,7 +24,7 @@ Terrain initializeTerrain() {
 	for (int i = 0; i < terrain.vertexCount; i++) {
 		std::vector<float> heightX;
 		for (int j = 0; j < terrain.vertexCount; j++) {
-			float height = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight) * terrain.maxHeight;
+			float height = generateHeight(j, i, terrain.seed, terrain.interpolationSteps, terrain.roughness, terrain.maxHeight);
 			heightX.push_back(height);
 
 			float x_coord = (float)j / ((float)terrain.vertexCount - 1) * terrain.size;
@@ -63,9 +63,7 @@ Terrain initializeTerrain() {
 			terrain.indices.push_back(bottomRight);
 		}
 	}
-
-
-
+	
 	glGenVertexArrays(1, &terrain.vao);
 	glBindVertexArray(terrain.vao);
 
