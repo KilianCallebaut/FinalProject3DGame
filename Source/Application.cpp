@@ -191,7 +191,9 @@ public:
 		vertices[7] = Vector3f(xmin.x, ymin.y, zmin.z);
 		for (int i = 0; i < 8; i++) {
 			curr_vertices[i] = vertices[i];
+			std::cout << vertices[i] <<'\n';
 		}
+		std::cout << '\n';
 	}
 
 	void scale(float s) {
@@ -285,10 +287,14 @@ public:
 			if (curr_vertices[i].z < zmin)
 				zmin = curr_vertices[i].z;
 		}
-		//std::cout << point << '\n';
-		//std::cout << xmax << '\n';
-		//std::cout << xmin << '\n';
-		//std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
+		std::cout << point << '\n';
+		std::cout << xmax << '\n';
+		std::cout << xmin << '\n';
+		std::cout << ymax << '\n';
+		std::cout << ymin << '\n';
+		std::cout << zmax << '\n';
+		std::cout << zmin << '\n';
+
 
 		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
 	}
@@ -334,12 +340,14 @@ public:
 		Vector3f ka = Vector3f(1, 1, 1);
 		Vector3f kd = Vector3f(1, 1, 1);
 		float ks = 96;
+		
+
+		std::string base = projectPath + "Resources\\Models\\Shadowman";
+		characterModel = loadModel(base + "\\Shadowman.obj");
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(characterModel);
 		boundingBox.update(scale, rotation, position);
 
-		std::string base = projectPath + "Resources\\Models\\Shadowman";
-		characterModel = loadModel(base + "\\Shadowman.obj");
 		characterModel.ka = ka;
 		characterModel.kd = kd;
 		characterModel.ks = ks;
@@ -755,7 +763,8 @@ public:
 			detectHit();
 
 			android.updateAndroid(character.position);
-			if (android.boundingBox.intersect(character.position)) {
+			std::cout << "character";
+			if (android.boundingBox.intersect(Vector3f(character.position.x, character.position.y + 1.0f, character.position.z))) {
 				character.back();
 			}
 
@@ -830,6 +839,7 @@ public:
 	}
 
 	void detectHit() {
+		
 		if (character.boundingBox.intersect(android.larmPosition) || character.boundingBox.intersect(android.rarmPosition)) {
 			character.die();
 		}
