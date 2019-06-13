@@ -186,34 +186,35 @@ public:
 		for (int i = 0; i < 8; i++) {
 			curr_vertices[i] = vertices[i];
 		}
-		
+
 	}
 
 	void scale(float s) {
 		for (int i = 0; i < 8; i++) {
-			std::cout << "scale" << vertices[i] << '\n';
+			//std::cout << "scale" << vertices[i] << '\n';
 			curr_vertices[i] *= s;
-			std::cout << vertices[i] << '\n';
+			//std::cout << vertices[i] << '\n';
+
+
 		}
 	}
 
 	void translate(Vector3f t) {
 		for (int i = 0; i < 8; i++) {
-			std::cout << "tran" << vertices[i] << '\n';
+			//std::cout << "tran" << vertices[i] << '\n';
 
 			curr_vertices[i] = curr_vertices[i] + t;
-			std::cout << vertices[i] << '\n';
+			//std::cout << vertices[i] << '\n';
 
 		}
 	}
 
 	void rotate(Vector3f r) {
 		for (int i = 0; i < 8; i++) {
-			std::cout << "rot" << vertices[i] << '\n';
-
+			//std::cout << "rot" << vertices[i] << '\n';
 			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(r.y) + curr_vertices[i].z * sinf(r.y), curr_vertices[i].y,
 				-curr_vertices[i].x * sinf(r.y) + curr_vertices[i].z * cosf(r.y));
-			std::cout << vertices[i] << '\n';
+			//std::cout << vertices[i] << '\n';
 
 		}
 		/*
@@ -228,7 +229,7 @@ public:
 		btr = Vector3f(btr.x * cosf(r.y) + btr.z * sinf(r.y), btr.y,
 			-btr.x * sinf(r.y) + btr.z * cosf(r.y));
 		blr = Vector3f(blr.x * cosf(r.y) + blr.z * sinf(r.y), blr.y,
-			-blr.x * sinf(r.y) + blr.z * cosf(r.y));		
+			-blr.x * sinf(r.y) + blr.z * cosf(r.y));
 		btl = Vector3f(btl.x * cosf(r.y) + btl.z * sinf(r.y), btl.y,
 			-btl.x * sinf(r.y) + btl.z * cosf(r.y));
 		bll = Vector3f(bll.x * cosf(r.y) + bll.z * sinf(r.y), bll.y,
@@ -279,17 +280,15 @@ public:
 			if (curr_vertices[i].z < zmin)
 				zmin = curr_vertices[i].z;
 		}
-		/*
-		std::cout << "point max min \n";
-		std::cout << point << '\n';
-		std::cout << xmax << '\n';
-		std::cout << xmin << '\n';
-		std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
-		*/
+		//std::cout << point << '\n';
+		//std::cout << xmax << '\n';
+		//std::cout << xmin << '\n';
+		//std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
 
 		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
 	}
 };
+
 
 class Character
 {
@@ -309,12 +308,18 @@ public:
 
 	//mode: 0=still, 1=running, 2=dead
 	int mode = 0;
-	
+
 
 	int idlecounter;
 	int runcounter;
 
 	std::string projectPath;
+
+
+
+	void setYPosition(float y) {
+		position.y = y;
+	}
 
 	void initCharacter(std::string ppath, Vector3f  pos, Vector3f rot = Vector3f(0, 0, 0))
 	{
@@ -322,6 +327,14 @@ public:
 
 		position = pos;
 		rotation = rot;
+
+
+		Vector3f ka = Vector3f(1, 1, 1);
+		Vector3f kd = Vector3f(1, 1, 1);
+		float ks = 96;
+		boundingBox = BoundingBox();
+		boundingBox.calculateBoundingBox(characterModel);
+		boundingBox.update(scale, rotation, position);
 
 		std::string base = projectPath + "Resources\\Models\\Shadowman";
 		characterModel = loadModel(base + "\\Shadowman.obj");
@@ -416,6 +429,54 @@ public:
 		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
 	}
 
+	Model nextFrame()
+	{
+		boundingBox.update(scale, rotation, position);
+
+		switch (mode) {
+		case 0:
+			idlecounter += 1;
+			if (idlecounter == 59)
+				idlecounter = 0;
+			return idleFrames[idlecounter];
+		case 1:
+			runcounter += 1;
+			if (runcounter == 24)
+				runcounter = 0;
+			move();
+			return runFrames[runcounter];
+		case 2:
+			return characterModel;
+		}
+	}
+
+	void run() {
+		switch (mode) {
+		case 0:
+			mode = 1;
+			break;
+		case 1:
+			mode = 0;
+			break;
+		}
+	}
+
+	void move() {
+		position += direction * speed;
+	}
+
+	void back() {
+		position -= direction * speed;
+	}
+
+	void rotate(int left) {
+
+		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
+			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
+
+		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
+	}
+
 	void die() {
 		if (mode != 2) {
 			rotation += Vector3f(90, 0, 0);
@@ -459,7 +520,7 @@ public:
 	//General
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 	std::string projectPath;
-	
+
 
 	void initAndroid(std::string path, Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0, 0, 0), Vector3f headRot = Vector3f(0, 0, 0)) {
 		projectPath = path;
@@ -487,10 +548,9 @@ public:
 
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(Body);
-		
-		//std::cout << "Android \n";
+
 		boundingBox.update(scale, rotation, position);
-		
+
 	}
 
 	void updateAndroid(Vector3f target) {
@@ -515,7 +575,7 @@ public:
 	}
 
 	void rotateArms() {
-		
+
 		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (rarmPosition))));
 		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (larmPosition))));
 
@@ -554,7 +614,7 @@ public:
 	bool atTarget(bool left) {
 		if (left) {
 			return calculateDistance(shotTarget, larmPosition) < 2.0f;
-		} 
+		}
 		return calculateDistance(shotTarget, rarmPosition) < 2.0f;
 	}
 
@@ -752,9 +812,10 @@ public:
 			b = std::chrono::system_clock::now();
 			std::chrono::duration<double, std::milli> sleep_time = b - a;
 
-			// Clear the screen
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			//viewMatrix.translate(Vector3f(side, up, forward));
+
+            // Clear the screen
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			viewMatrix.translate(Vector3f(side, up, forward));
 			rotateCamera();
 			moveCamera();
 
@@ -771,35 +832,36 @@ public:
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
 			detectHit();
+
+
 			android.updateAndroid(character.position);
-			//std::cout << "android char \n";
 			if (android.boundingBox.intersect(character.position)) {
 				character.back();
 			}
-			
-			//std::cout << "Intersects: "<< android.boundingBox.intersect(character.position);
 
-			//Set the height to terrain level
-			//float y = generateHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
-			//std::cout << y << std::endl;
+			//Set the height to terrain level (terrain collision detection)
+			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			character.setYPosition(y);
 
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
 			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-			glClear(GL_DEPTH_BUFFER_BIT);
-			//render whole scene for only depthmap
-			renderCube(shadowShader, cube_01, Vector3f(5, 1, 5), lightPosition, lightColor);
-			renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
-			//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
 
-			drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-			drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
-			drawModel(shadowShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
-			drawModel(shadowShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
-			drawModel(shadowShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
+				glClear(GL_DEPTH_BUFFER_BIT);
+				glCullFace(GL_FRONT);
+				//render whole scene for only depthmap
+				//renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
+				//renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
+				drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
+				drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
+				drawModel(shadowShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
+				drawModel(shadowShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
+				drawModel(shadowShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
 
-			drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
+				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0), lightPosition, lightColor);
+				glCullFace(GL_BACK);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -818,7 +880,7 @@ public:
 			drawModel(blinnPhong, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
 			drawModel(blinnPhong, android.Arm, android.armPosition(true) , lightPosition, lightColor, android.larmRotation, android.scale);
 			drawModel(blinnPhong, android.Arm, android.armPosition(false) , lightPosition, lightColor, android.rarmRotation, android.scale);
-			
+
 
 			terrainShader.bind();
 			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -1063,7 +1125,7 @@ public:
 		viewPosition += Vector3f(0, up, 0);
 	}
 
-	
+
 	void zoomCamera() {
 		float a = ff;
 		a -= 980.0f;
@@ -1076,7 +1138,7 @@ public:
 		//terrainShader.uniformMatrix4f("projMatrix", m);
 		//defaultShader.uniformMatrix4f("projMatrix", m);
 	}
-	
+
 
 private:
 	Window window;
@@ -1122,6 +1184,7 @@ private:
 	float ff = 1000.0f;
 	float step = 1.0f;
 	float cam_rot_sp = 2.0f;
+
 
 	//shadow
 	GLuint depthMapFBO;
