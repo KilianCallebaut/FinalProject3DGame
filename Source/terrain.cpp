@@ -16,7 +16,7 @@ Terrain initializeTerrain() {
 	terrain.maxHeight = 5.0f; //Maximum height
 	terrain.interpolationSteps = 3;
 	terrain.roughness = 0.3f;
-	terrain.ka = Vector3f(0.36, 0.25, 0.2);
+	terrain.ka = Vector3f(0.72, 0.5, 0.4);
 	terrain.kd = Vector3f(0.36, 0.5, 0.5);
 	terrain.ks = 8.0f;
 
@@ -185,6 +185,7 @@ float getHeight(float xPos, float zPos, std::vector<std::vector<float>> heights,
 
 }
 
+//Position in triangle
 float barryCentric(Vector3f p1, Vector3f p2, Vector3f p3, Vector2f pos) {
 	float det = (p2.z - p3.z) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.z - p3.z);
 	float l1 = ((p2.z - p3.z) * (pos.x - p3.x) + (p3.x - p2.x) * (pos.y - p3.z)) / det;

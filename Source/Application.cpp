@@ -143,12 +143,165 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
+class BoundingBox {
+public:
+	/*
+	Vector3f ftr;
+	Vector3f flr;
+	Vector3f ftl;
+	Vector3f fll;
+	Vector3f btr;
+	Vector3f blr;
+	Vector3f btl;
+	Vector3f bll;*/
+	Vector3f vertices[8];
+	Vector3f curr_vertices[8];
+
+	void calculateBoundingBox(Model m) {
+
+		Vector3f xmax;
+		Vector3f ymax;
+		Vector3f zmax;
+		Vector3f xmin;
+		Vector3f ymin;
+		Vector3f zmin;
+		for (Vector3f a : m.vertices) {
+			if (a.x > xmax.x)
+				xmax = a;
+			if (a.y > ymax.y)
+				ymax = a;
+			if (a.z > zmax.z)
+				zmax = a;
+			if (a.x < xmin.x)
+				//std::cout << xmin << '\n';
+				xmin = a;
+			if (a.y < ymin.y)
+				ymin = a;
+			if (a.z < zmin.z)
+				zmin = a;
+		}
+
+		vertices[0] = Vector3f(xmax.x, ymax.y, zmax.z);
+		vertices[1] = Vector3f(xmax.x, ymin.y, zmax.z);
+		vertices[2] = Vector3f(xmin.x, ymax.y, zmax.z);
+		vertices[3] = Vector3f(xmin.x, ymin.y, zmax.z);
+		vertices[4] = Vector3f(xmax.x, ymax.y, zmin.z);
+		vertices[5] = Vector3f(xmax.x, ymin.y, zmin.z);
+		vertices[6] = Vector3f(xmin.x, ymax.y, zmin.z);
+		vertices[7] = Vector3f(xmin.x, ymin.y, zmin.z);
+		for (int i = 0; i < 8; i++) {
+			curr_vertices[i] = vertices[i];
+		}
+	}
+
+	void scale(float s) {
+		for (int i = 0; i < 8; i++) {
+			//std::cout << "scale" << vertices[i] << '\n';
+			curr_vertices[i] *= s;
+			//std::cout << vertices[i] << '\n';
+
+
+		}
+	}
+
+	void translate(Vector3f t) {
+		for (int i = 0; i < 8; i++) {
+			//std::cout << "tran" << vertices[i] << '\n';
+
+			curr_vertices[i] = curr_vertices[i] + t;
+			//std::cout << vertices[i] << '\n';
+
+		}
+	}
+
+	void rotate(Vector3f r) {
+		for (int i = 0; i < 8; i++) {
+			//std::cout << "rot" << vertices[i] << '\n';
+			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(r.y) + curr_vertices[i].z * sinf(r.y), curr_vertices[i].y,
+				-curr_vertices[i].x * sinf(r.y) + curr_vertices[i].z * cosf(r.y));
+			//std::cout << vertices[i] << '\n';
+
+		}
+		/*
+		ftr = Vector3f(ftr.x * cosf(r.y) + ftr.z * sinf(r.y), ftr.y,
+			-ftr.x * sinf(r.y) + ftr.z * cosf(r.y));
+		flr = Vector3f(flr.x * cosf(r.y) + flr.z * sinf(r.y), flr.y,
+			-flr.x * sinf(r.y) + flr.z * cosf(r.y));
+		ftl = Vector3f(ftl.x * cosf(r.y) + ftl.z * sinf(r.y), ftl.y,
+			-ftl.x * sinf(r.y) + ftl.z * cosf(r.y));
+		fll = Vector3f(fll.x * cosf(r.y) + fll.z * sinf(r.y), fll.y,
+			-fll.x * sinf(r.y) + fll.z * cosf(r.y));
+		btr = Vector3f(btr.x * cosf(r.y) + btr.z * sinf(r.y), btr.y,
+			-btr.x * sinf(r.y) + btr.z * cosf(r.y));
+		blr = Vector3f(blr.x * cosf(r.y) + blr.z * sinf(r.y), blr.y,
+			-blr.x * sinf(r.y) + blr.z * cosf(r.y));
+		btl = Vector3f(btl.x * cosf(r.y) + btl.z * sinf(r.y), btl.y,
+			-btl.x * sinf(r.y) + btl.z * cosf(r.y));
+		bll = Vector3f(bll.x * cosf(r.y) + bll.z * sinf(r.y), bll.y,
+			-bll.x * sinf(r.y) + bll.z * cosf(r.y));
+			*/
+	}
+
+	void update(float s, Vector3f rot, Vector3f pos) {
+		for (int i = 0; i < 8; i++) {
+			curr_vertices[i] = vertices[i];
+
+			//std::cout << "scale" << vertices[i] << '\n';
+			curr_vertices[i] *= s;
+			//std::cout << vertices[i] << '\n';
+
+			//std::cout << "rot" << vertices[i] << '\n';
+			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(rot.y) + curr_vertices[i].z * sinf(rot.y), curr_vertices[i].y,
+				-curr_vertices[i].x * sinf(rot.y) + curr_vertices[i].z * cosf(rot.y));
+			//std::cout << vertices[i] << '\n';
+
+			//std::cout << "tran" << vertices[i] << '\n';
+			curr_vertices[i] = curr_vertices[i] + pos;
+			//std::cout << vertices[i] << '\n';
+		}
+		//scale(s);
+		//rotate(rot);
+		//translate(pos);
+	}
+
+	bool intersect(Vector3f point) {
+		float xmax = curr_vertices[0].x;
+		float ymax = curr_vertices[0].y;
+		float zmax = curr_vertices[0].z;
+		float xmin = curr_vertices[0].x;
+		float ymin = curr_vertices[0].y;
+		float zmin = curr_vertices[0].z;
+		for (int i = 0; i < 8; i++) {
+			if (curr_vertices[i].x > xmax)
+				xmax = curr_vertices[i].x;
+			if (curr_vertices[i].y > ymax)
+				ymax = curr_vertices[i].y;
+			if (curr_vertices[i].z > zmax)
+				zmax = curr_vertices[i].z;
+			if (curr_vertices[i].x < xmin)
+				xmin = curr_vertices[i].x;
+			if (curr_vertices[i].y < ymin)
+				ymin = curr_vertices[i].y;
+			if (curr_vertices[i].z < zmin)
+				zmin = curr_vertices[i].z;
+		}
+		//std::cout << point << '\n';
+		//std::cout << xmax << '\n';
+		//std::cout << xmin << '\n';
+		//std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
+
+		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
+	}
+};
+
+
 class Character
 {
 public:
 	Model characterModel;
 	Model runFrames[24];
 	Model idleFrames[59];
+	BoundingBox boundingBox;
 	Vector3f position;
 	Vector3f rotation;
 	Vector3f direction = Vector3f(0, 0, 1.0f);
@@ -166,44 +319,7 @@ public:
 
 	std::string projectPath;
 
-	Model nextFrame()
-	{
-		switch (mode) {
-		case 0:
-			idlecounter += 1;
-			if (idlecounter == 59)
-				idlecounter = 0;
-			return idleFrames[idlecounter];
-		case 1:
-			runcounter += 1;
-			if (runcounter == 24)
-				runcounter = 0;
-			position += direction * speed;
-			return runFrames[runcounter];
-		case 2:
-			return characterModel;
-		}
-	}
-
-	void run() {
-		switch (mode) {
-		case 0:
-			mode = 1;
-			break;
-		case 1:
-			mode = 0;
-			break;
-		}
-	}
-
-	void rotate(int left) {
-
-		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
-			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
-
-		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
-	}
-
+	
 	void setYPosition(float y) {
 		position.y = y;
 	}
@@ -218,6 +334,9 @@ public:
 		Vector3f ka = Vector3f(1, 1, 1);
 		Vector3f kd = Vector3f(1, 1, 1);
 		float ks = 96;
+		boundingBox = BoundingBox();
+		boundingBox.calculateBoundingBox(characterModel);
+		boundingBox.update(scale, rotation, position);
 
 		std::string base = projectPath + "Resources\\Models\\Shadowman";
 		characterModel = loadModel(base + "\\Shadowman.obj");
@@ -258,6 +377,54 @@ public:
 
 	}
 
+	Model nextFrame()
+	{
+		boundingBox.update(scale, rotation, position);
+
+		switch (mode) {
+		case 0:
+			idlecounter += 1;
+			if (idlecounter == 59)
+				idlecounter = 0;
+			return idleFrames[idlecounter];
+		case 1:
+			runcounter += 1;
+			if (runcounter == 24)
+				runcounter = 0;
+			move();
+			return runFrames[runcounter];
+		case 2:
+			return characterModel;
+		}
+	}
+
+	void run() {
+		switch (mode) {
+		case 0:
+			mode = 1;
+			break;
+		case 1:
+			mode = 0;
+			break;
+		}
+	}
+
+	void move() {
+		position += direction * speed;
+	}
+
+	void back() {
+		position -= direction * speed;
+	}
+
+	void rotate(int left) {
+
+		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
+			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
+
+		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
+	}
+
 	void die() {
 		if (mode != 2) {
 			rotation += Vector3f(90, 0, 0);
@@ -272,6 +439,7 @@ public:
 	Model Body;
 	Model Arm;
 	float scale = 10.0f;
+	BoundingBox boundingBox;
 
 	Vector3f position;
 	Vector3f rotation;
@@ -286,6 +454,7 @@ public:
 	Vector3f larmPosition = Vector3f(scale * 1.4f, scale * 1.5, scale * 0);
 	Vector3f rarmPosition = Vector3f(scale * -1.4f, scale * 1.5, scale * 0);
 
+	Vector3f lookTarget;
 	bool shooting = false;
 	Vector3f shotTarget;
 	bool timerS = false;
@@ -325,17 +494,22 @@ public:
 		Arm.kd = Vector3f(0.5, 0, 0);
 		Arm.ks = 8.0f;
 
+		boundingBox = BoundingBox();
+		boundingBox.calculateBoundingBox(Body);
+		boundingBox.update(scale, rotation, position);
 
 	}
 
-	void updateAndroid() {
-
-		if (shotTarget != Vector3f(0)) {
+	void updateAndroid(Vector3f target) {
+		lookTarget = target;
+		if (lookTarget != Vector3f(0)) {
 			rotateArms();
 			rotateHead();
 			shootArms();
 		}
-
+		if (!shooting) {
+			shotTarget = lookTarget;
+		}
 		if (shooting && shotDone()) {
 			resetArms();
 		}
@@ -361,7 +535,7 @@ public:
 
 	void rotateHead() {
 
-		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (position + headPosition))), 0);
+		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(lookTarget - (position + headPosition))), 0);
 		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
 		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
@@ -563,8 +737,9 @@ public:
 
             // Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			viewMatrix.translate(Vector3f(side, 0, forward));
+			viewMatrix.translate(Vector3f(side, up, forward));
 			rotateCamera();
+			moveCamera();
 
 			//Get viewposition
 			Matrix4f inv = inverse(viewMatrix);
@@ -578,17 +753,16 @@ public:
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
 			detectHit();
-			android.setTarget(character.position);
-			android.updateAndroid();
+
+			android.updateAndroid(character.position);
+			if (android.boundingBox.intersect(character.position)) {
+				character.back();
+			}
 
 			//Set the height to terrain level (terrain collision detection)
 			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
 			character.setYPosition(y);
 			
-			float yBoss = getHeight(200, 200, terrain.heights, terrain.size, terrain.vertexCount);
-			Vector3f bossPosition = Vector3f(200, yBoss, 200);
-
-
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
 			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -598,7 +772,7 @@ public:
 				//render whole scene for only depthmap
 				//renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
 				//renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
-				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
+				drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
 				drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
 				drawModel(shadowShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
@@ -645,7 +819,7 @@ public:
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
 			}
-			viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
+			viewMatrix = lookAtMatrix(viewPosition + character.position, character.position, Vector3f(0, 1.0f, 0));
 
 			// Processes input and swaps the window buffer
             window.update();
@@ -656,7 +830,7 @@ public:
     }
 
 	void detectHit() {
-		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
+		if (character.boundingBox.intersect(android.larmPosition) || character.boundingBox.intersect(android.rarmPosition)) {
 			character.die();
 		}
 	}
@@ -849,10 +1023,14 @@ public:
 	}
 
 	void rotateCamera() {
-		Vector3f direction = viewRotation;
+		Vector3f direction = viewPosition;
 		float radAngle = angle * Math::PI / 180.f;
-		viewRotation = Vector3f(direction.x * cosf((float)radAngle) + direction.z * sinf((float)radAngle), direction.y,
+		viewPosition = Vector3f(direction.x * cosf((float)radAngle) + direction.z * sinf((float)radAngle), direction.y,
 			-direction.x * sinf((float)radAngle) + direction.z * cosf((float)radAngle));
+	}
+
+	void moveCamera() {
+		viewPosition += Vector3f(0, up, 0);
 	}
 
 private:
@@ -898,7 +1076,7 @@ private:
 	float nn = 0.1f;
 	float ff = 1000.0f;
 	float step = 0.01f;
-	float cam_rot_sp = 0.1f;
+	float cam_rot_sp = 2.0;
 
 	//shadow
 	GLuint depthMapFBO;

@@ -50,11 +50,9 @@ void main() {
 
 	float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
 
+	//Currently just use this color. Textures are possible too, but we prefered this look.
     vec3 color = vec3(1, 1, 1);
-    if (hasTexCoords) {
-        color = texture(colorMap, fs_in.TexCoords).rgb;
-	}
-
+    
 	//Ambient
 	vec4 ambient = vec4(passka, 1);
 
