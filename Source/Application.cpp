@@ -85,6 +85,10 @@ float calculatexzRotation(Vector3f dir, Vector3f b) {
 
 }
 
+float calculateDistance(Vector3f a, Vector3f b) {
+	return (a - b).sqrMagnitude();
+}
+
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
 Matrix4f lookAtMatrix(Vector3f camera, Vector3f target, Vector3f up) {
 	Vector3f forward = normalize(target - camera);
@@ -148,8 +152,9 @@ public:
 	float rotationspeed = 30.0f * Math::PI / 180.0f;
 
 
-	//mode: 0=still, 1=running
+	//mode: 0=still, 1=running, 2=dead
 	int mode = 0;
+	
 
 	int idlecounter;
 	int runcounter;
@@ -170,6 +175,8 @@ public:
 				runcounter = 0;
 			position += direction * speed;
 			return runFrames[runcounter];
+		case 2:
+			return characterModel;
 		}
 	}
 
@@ -237,6 +244,13 @@ public:
 		}
 
 	}
+
+	void die() {
+		if (mode != 2) {
+			rotation += Vector3f(90, 0, 0);
+			mode = 2;
+		}
+	}
 };
 
 class Android {
@@ -263,9 +277,11 @@ public:
 	Vector3f shotTarget;
 	bool timerS = false;
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> timer;
+	bool reTimerS = false;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> rechTimer;
 
 	//projectiles
-	float p_speed = 0.5f;
+	float p_speed = 2.0f;
 
 	//General
 	Vector3f direction = Vector3f(0, 0, 1.0f);
@@ -299,10 +315,28 @@ public:
 
 	}
 
-	void rotateArms(Vector3f target) {
+	void updateAndroid() {
+		
+		if (shotTarget != Vector3f(0)) {
+			rotateArms();
+			rotateHead();
+			shootArms();
+		}
 
-		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (rarmPosition))));
-		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (larmPosition))));
+		if (shooting && shotDone()) {
+			resetArms();
+		}
+	}
+
+	void setTarget(Vector3f target) {
+		if (!shooting)
+			shotTarget = target;
+	}
+
+	void rotateArms() {
+
+		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (rarmPosition))));
+		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (larmPosition))));
 
 		//std::cout << armRotation <<'\n';
 		//armRotation += Vector3f(0.5f, 0, 0);
@@ -312,16 +346,16 @@ public:
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 
-	void rotateHead(Vector3f target) {
+	void rotateHead() {
 
-		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(target - (position + headPosition))), 0);
+		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (position + headPosition))), 0);
 		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
 		//		-direction.x*sinf() + direction.z*cosf());
 		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
 		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 
-	void shootArms(Vector3f target) {
+	void shootArms() {
 
 		if (!timerS && !shooting) {
 			timer = std::chrono::system_clock::now() + std::chrono::seconds(3);
@@ -330,9 +364,29 @@ public:
 
 		if (timerS && std::chrono::system_clock::now() > timer) {
 			shooting = true;
-			shotTarget = target;
 			timerS = false;
+
 		}
+
+	}
+
+	bool atTarget(bool left) {
+		if (left) {
+			return calculateDistance(shotTarget, larmPosition) < 2.0f;
+		} 
+		return calculateDistance(shotTarget, rarmPosition) < 2.0f;
+	}
+
+	bool shotDone() {
+		if (shooting && atTarget(true) && atTarget(false) && !reTimerS) {
+			rechTimer = std::chrono::system_clock::now() + std::chrono::seconds(3);
+			reTimerS = true;
+		}
+		if (reTimerS && std::chrono::system_clock::now() > rechTimer) {
+			reTimerS = false;
+			return true;
+		}
+		return false;
 	}
 
 	Vector3f armPosition(bool larm) {
@@ -359,6 +413,10 @@ public:
 	void resetArms() {
 		larmPosition = Vector3f(scale*1.4f, scale*1.5, scale * 0) + position;
 		rarmPosition = Vector3f(scale*-1.4f, scale*1.5, scale * 0) + position;
+		larmRotation = Vector3f(0);
+		rarmRotation = Vector3f(0);
+		shotTarget = Vector3f(0);
+		shooting = false;
 	}
 };
 
@@ -529,6 +587,10 @@ public:
 
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
+			detectHit();
+			android.setTarget(character.position);
+			android.updateAndroid();
+
 			//Set the height to terrain level
 			//float y = getHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
 			//std::cout << y << std::endl;
@@ -568,9 +630,7 @@ public:
 			drawModel(blinnPhong, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
 			drawModel(blinnPhong, android.Arm, android.armPosition(true) , lightPosition, lightColor, android.larmRotation, android.scale);
 			drawModel(blinnPhong, android.Arm, android.armPosition(false) , lightPosition, lightColor, android.rarmRotation, android.scale);
-			android.rotateArms(character.position);
-			android.rotateHead(character.position);
-			android.shootArms(character.position);
+			
 
 			terrainShader.bind();
 			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
@@ -598,6 +658,12 @@ public:
 
 		glDeleteFramebuffers(1, &depthMapFBO);
 
+	}
+
+	void detectHit() {
+		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
+			character.die();
+		}
 	}
 
 	//Setup the framebuffer that calculates the shadow from the one light point

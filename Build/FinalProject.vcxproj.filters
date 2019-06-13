@@ -10,12 +10,24 @@
     <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\terrain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Cube.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\terrain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\mrKC1\Documents\GitHub\FinalProject3DGame\Source\cube.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
