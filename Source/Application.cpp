@@ -680,10 +680,11 @@ public:
 		setupShadowFrameBuffer();
 
 		//Init models
-		tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
+		tmp = loadModel(projectPath + "Resources\\Models\\Android\\android_body.obj");
 		tmp.ka = Vector3f(0.1, 0.1, 0.1);
 		tmp.kd = Vector3f(0, 0.1, 0);
 		tmp.ks = 8.0f;
+		std::cout << tmp.texCoords.size() << std::endl;
 
 		//Init boss
 		android = Android();
@@ -821,10 +822,6 @@ public:
 		if (character.boundingBox.intersect(android.larmPosition) || character.boundingBox.intersect(android.rarmPosition)) {
 			character.die();
 		}
-		/*
-		if (calculateDistance(android.larmPosition, character.position) < 2.0f || calculateDistance(android.rarmPosition, character.position) < 2.0f) {
-			character.die();
-		}*/
 	}
 
 	//Setup the framebuffer that calculates the shadow from the one light point
