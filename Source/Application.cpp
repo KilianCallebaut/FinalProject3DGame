@@ -149,6 +149,7 @@ public:
 	Vector3f btl;
 	Vector3f bll;*/
 	Vector3f vertices[8];
+	Vector3f curr_vertices[8];
 
 	void calculateBoundingBox(Model m) {
 
@@ -182,36 +183,37 @@ public:
 		vertices[5] = Vector3f(xmax.x, ymin.y, zmin.z);
 		vertices[6] = Vector3f(xmin.x, ymax.y, zmin.z);
 		vertices[7] = Vector3f(xmin.x, ymin.y, zmin.z);
+		for (int i = 0; i < 8; i++) {
+			curr_vertices[i] = vertices[i];
+		}
 		
 	}
 
 	void scale(float s) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "scale" << vertices[i] << '\n';
-			vertices[i] *= s;
-			//std::cout << vertices[i] << '\n';
-
-
+			std::cout << "scale" << vertices[i] << '\n';
+			curr_vertices[i] *= s;
+			std::cout << vertices[i] << '\n';
 		}
 	}
 
 	void translate(Vector3f t) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "tran" << vertices[i] << '\n';
+			std::cout << "tran" << vertices[i] << '\n';
 
-			vertices[i] += t;
-			//std::cout << vertices[i] << '\n';
+			curr_vertices[i] = curr_vertices[i] + t;
+			std::cout << vertices[i] << '\n';
 
 		}
 	}
 
 	void rotate(Vector3f r) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "rot" << vertices[i] << '\n';
+			std::cout << "rot" << vertices[i] << '\n';
 
-			vertices[i] = Vector3f(vertices[i].x * cosf(r.y) + vertices[i].z * sinf(r.y), vertices[i].y,
-				-vertices[i].x * sinf(r.y) + vertices[i].z * cosf(r.y));
-			//std::cout << vertices[i] << '\n';
+			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(r.y) + curr_vertices[i].z * sinf(r.y), curr_vertices[i].y,
+				-curr_vertices[i].x * sinf(r.y) + curr_vertices[i].z * cosf(r.y));
+			std::cout << vertices[i] << '\n';
 
 		}
 		/*
@@ -234,31 +236,56 @@ public:
 			*/
 	}
 
-	bool intersect(Vector3f point) {
-		float xmax = 0;
-		float ymax = 0;
-		float zmax = 0;
-		float xmin = 0;
-		float ymin = 0;
-		float zmin = 0;
+	void update(float s, Vector3f rot, Vector3f pos) {
 		for (int i = 0; i < 8; i++) {
-			if (vertices[i].x > xmax)
-				xmax = vertices[i].x;
-			if (vertices[i].y > ymax)
-				ymax = vertices[i].y;
-			if (vertices[i].z > zmax)
-				zmax = vertices[i].z;
-			if (vertices[i].x < xmin)
-				xmin = vertices[i].x;
-			if (vertices[i].y < ymin)
-				ymin = vertices[i].y;
-			if (vertices[i].z < zmin)
-				zmin = vertices[i].z;
+			curr_vertices[i] = vertices[i];
+
+			//std::cout << "scale" << vertices[i] << '\n';
+			curr_vertices[i] *= s;
+			//std::cout << vertices[i] << '\n';
+
+			//std::cout << "rot" << vertices[i] << '\n';
+			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(rot.y) + curr_vertices[i].z * sinf(rot.y), curr_vertices[i].y,
+				-curr_vertices[i].x * sinf(rot.y) + curr_vertices[i].z * cosf(rot.y));
+			//std::cout << vertices[i] << '\n';
+
+			//std::cout << "tran" << vertices[i] << '\n';
+			curr_vertices[i] = curr_vertices[i] + pos;
+			//std::cout << vertices[i] << '\n';
 		}
+		//scale(s);
+		//rotate(rot);
+		//translate(pos);
+	}
+
+	bool intersect(Vector3f point) {
+		float xmax = curr_vertices[0].x;
+		float ymax = curr_vertices[0].y;
+		float zmax = curr_vertices[0].z;
+		float xmin = curr_vertices[0].x;
+		float ymin = curr_vertices[0].y;
+		float zmin = curr_vertices[0].z;
+		for (int i = 0; i < 8; i++) {
+			if (curr_vertices[i].x > xmax)
+				xmax = curr_vertices[i].x;
+			if (curr_vertices[i].y > ymax)
+				ymax = curr_vertices[i].y;
+			if (curr_vertices[i].z > zmax)
+				zmax = curr_vertices[i].z;
+			if (curr_vertices[i].x < xmin)
+				xmin = curr_vertices[i].x;
+			if (curr_vertices[i].y < ymin)
+				ymin = curr_vertices[i].y;
+			if (curr_vertices[i].z < zmin)
+				zmin = curr_vertices[i].z;
+		}
+		/*
+		std::cout << "point max min \n";
 		std::cout << point << '\n';
 		std::cout << xmax << '\n';
 		std::cout << xmin << '\n';
 		std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
+		*/
 
 		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
 	}
@@ -303,6 +330,9 @@ public:
 		characterModel.ks = 8.0f;
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(characterModel);
+		//std::cout << "Character \n";
+		boundingBox.update(scale, rotation, position);
+
 
 		for (int i = 0; i < 24; i++) {
 			std::string number;
@@ -340,9 +370,8 @@ public:
 
 	Model nextFrame()
 	{
-		boundingBox.scale(scale);
-		boundingBox.translate(position);
-		boundingBox.rotate(rotation);
+		boundingBox.update(scale, rotation, position);
+
 		switch (mode) {
 		case 0:
 			idlecounter += 1;
@@ -459,10 +488,9 @@ public:
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(Body);
 		
-		boundingBox.scale(scale);
-		boundingBox.translate(pos);
-		boundingBox.rotate(rotation);
-
+		//std::cout << "Android \n";
+		boundingBox.update(scale, rotation, position);
+		
 	}
 
 	void updateAndroid(Vector3f target) {
@@ -688,7 +716,7 @@ public:
 
 		//Init boss
 		android = Android();
-		android.initAndroid(projectPath, Vector3f(0, 0, 5.0f));
+		android.initAndroid(projectPath, Vector3f(200.0f, 0, 200.0f));
 
 		//Init character
 		character = Character();
@@ -726,8 +754,9 @@ public:
 
 			// Clear the screen
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			viewMatrix.translate(Vector3f(side, 0, forward));
+			//viewMatrix.translate(Vector3f(side, up, forward));
 			rotateCamera();
+			moveCamera();
 
 			//Get viewposition
 			Matrix4f inv = inverse(viewMatrix);
@@ -743,6 +772,7 @@ public:
 			Model charFrame = character.nextFrame();
 			detectHit();
 			android.updateAndroid(character.position);
+			//std::cout << "android char \n";
 			if (android.boundingBox.intersect(character.position)) {
 				character.back();
 			}
@@ -799,7 +829,7 @@ public:
 			drawSurface(terrainShader, terrain, rockyTerrain, Vector3f(0, 0, 0));
 
 			if (cameraFollow) {
-				viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
+				viewMatrix = lookAtMatrix(viewPosition + character.position, character.position, Vector3f(0, 1.0f, 0));
 			}
 
 			if (showCoord) {
@@ -807,7 +837,7 @@ public:
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
 			}
-			viewMatrix = lookAtMatrix(viewRotation + character.position, character.position, Vector3f(0, 1.0f, 0));
+			viewMatrix = lookAtMatrix(viewPosition + character.position, character.position, Vector3f(0, 1.0f, 0));
 
 			// Processes input and swaps the window buffer
 			window.update();
@@ -947,6 +977,9 @@ public:
 		case GLFW_KEY_B:
 			drawTestModel = !drawTestModel;
 			break;
+		case GLFW_KEY_Z:
+			//zoomCamera();
+			break;
 		case GLFW_KEY_1:
 			//lookAtMatrix();
 			break;
@@ -1017,12 +1050,29 @@ public:
 	}
 
 	void rotateCamera() {
-		Vector3f direction = viewRotation;
+		Vector3f direction = viewPosition;
 		float radAngle = angle * Math::PI / 180.f;
-		viewRotation = Vector3f(direction.x * cosf((float)radAngle) + direction.z * sinf((float)radAngle), direction.y,
+		viewPosition = Vector3f(direction.x * cosf((float)radAngle) + direction.z * sinf((float)radAngle), direction.y,
 			-direction.x * sinf((float)radAngle) + direction.z * cosf((float)radAngle));
 	}
 
+	void moveCamera() {
+		viewPosition += Vector3f(0, up, 0);
+	}
+
+	/*
+	void zoomCamera() {
+		//viewPosition += Vector3f(0, up, 0);
+		nn += 10.0f;
+		std::cout << projMatrix.str();
+		Matrix4f m = orthographic(nn, ff, SCR_WIDTH, SCR_HEIGHT);
+		std::cout << projMatrix.str()<< '\n';
+
+		blinnPhong.uniformMatrix4f("projMatrix", m);
+		terrainShader.uniformMatrix4f("projMatrix", m);
+		defaultShader.uniformMatrix4f("projMatrix", m);
+	}
+	*/
 
 private:
 	Window window;
@@ -1066,8 +1116,8 @@ private:
 
 	float nn = 0.1f;
 	float ff = 1000.0f;
-	float step = 0.01f;
-	float cam_rot_sp = 0.5f;
+	float step = 1.0f;
+	float cam_rot_sp = 2.0f;
 
 	//shadow
 	GLuint depthMapFBO;
