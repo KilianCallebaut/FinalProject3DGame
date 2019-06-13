@@ -469,7 +469,7 @@ public:
 				renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
 				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-				drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0), 10);
+				drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0));
 				drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
 				drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
 				drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
