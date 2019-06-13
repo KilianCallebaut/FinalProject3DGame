@@ -1,13 +1,9 @@
 #version 330
 uniform sampler2D colorMap;
-uniform sampler2D shadowMap;
+uniform sampler2D depthMap;
 
 uniform bool hasTexCoords;
 
-in vec3 passPosition;
-in vec3 passNormal;
-in vec2 passTexCoord;
-in vec4 passShadowCoord;
 in vec3 passLightColor;
 in vec3 lightPos;
 in vec3 passkd;
@@ -49,16 +45,17 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 
 
 void main() {
-    vec3 normal = normalize(passNormal);
-	//lightPos = vec3(sin(time), 1.0, cos(time));
-    vec3 lightDir   = normalize(lightPos - passPosition.xyz);
-	vec3 viewDir = normalize(passViewPos - passPosition.xyz);
+    vec3 normal = normalize(fs_in.Normal);
+    vec3 lightDir   = normalize(lightPos - fs_in.FragPos.xyz);
+	vec3 viewDir = normalize(passViewPos - fs_in.FragPos.xyz);
 	vec3 halfwayDir = normalize(lightDir + viewDir);
+
+	float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
 
 
     vec3 color = vec3(1, 1, 1);
     if (hasTexCoords) {
-        color = texture(colorMap, passTexCoord).rgb;
+        color = texture(colorMap, fs_in.TexCoords).rgb;
 	}
 
 	//Ambient
@@ -71,5 +68,5 @@ void main() {
 	float spec = pow(max(dot(normal, halfwayDir), 0.0), passks);
 	vec4 specular = vec4((spec*passLightColor),1);
 
-    finalColor = specular + ambient + diffuse;
+	finalColor = (ambient + (1.0 - shadow ) * (diffuse + specular)) * vec4(color, 1);
 }

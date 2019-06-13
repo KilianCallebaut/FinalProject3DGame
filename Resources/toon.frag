@@ -51,13 +51,13 @@ void main() {
 	float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
 
 	//Currently just use this color. Textures are possible too, but we prefered this look.
-    vec3 color = vec3(1, 1, 1);
+    vec4 color = vec4(1.0f);
 
 	//Ambient
-	vec4 ambient = vec4(passka, 1);
+	vec4 ambient = vec4(passka, 1.0f);
 
 	//Diffuse
-	float intensity = max(dot(lightDir, normal), 0.0);
+	float intensity = max(dot(lightDir, normal), 0);
 
 	if (intensity >= 0.95)
         color = vec4(1.0,1,1,1.0) * color;
@@ -68,5 +68,5 @@ void main() {
     else
         color = vec4(0.1,0.1,0.1,1.0) * color;
 
-   finalColor = vec4(color, 1) * (1-shadow);
+   finalColor = color * (1.0f-shadow);
 }
