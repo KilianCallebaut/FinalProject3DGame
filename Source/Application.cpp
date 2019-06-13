@@ -108,11 +108,17 @@ bool FileExists(const std::string & Filename) {
 }
 
 //Draw the surface
-void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vector3f position) {
+void drawSurface(ShaderProgram& shader, const Terrain& terrain, Image image, Vector3f position, Vector3f lightPosition, Vector3f lightColor) {
 	Matrix4f modelMatrix;
 	modelMatrix.translate(position);
 
 	shader.uniformMatrix4f("modelMatrix", modelMatrix);
+	shader.uniform3f("lightPosition", lightPosition);
+	shader.uniform3f("lightColor", lightColor);
+	shader.uniform1f("hasTexCoords", terrain.texCoords.size() > 0);
+	shader.uniform1f("ks", terrain.ks);
+	shader.uniform3f("ka", terrain.ka);
+	shader.uniform3f("kd", terrain.kd);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, image.handle);
 	glBindVertexArray(terrain.vao);
@@ -190,6 +196,10 @@ public:
 		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
 	}
 
+	void setYPosition(float y) {
+		position.y = y;
+	}
+
 	void initCharacter(std::string ppath, Vector3f  pos, Vector3f rot = Vector3f(0, 0, 0))
 	{
 		projectPath = ppath;
@@ -213,7 +223,7 @@ public:
 			std::string path = base + "\\RunAnimation\\Shadowmanv_0000" + number + ".obj";
 
 			runFrames[i] = loadModel(path);
-			runFrames[i].ka = Vector3f(0.1, 0, 0);
+			runFrames[i].ka = Vector3f(0.1, 1, 0);
 			runFrames[i].kd = Vector3f(0.5, 0, 0);
 			runFrames[i].ks = 8.0f;
 		}
@@ -229,7 +239,7 @@ public:
 			std::string path = base + "\\IdleAnimation\\Shadowmanv_0000" + number + ".obj";
 
 			idleFrames[i] = loadModel(path);
-			idleFrames[i].ka = Vector3f(0.1, 0, 0);
+			idleFrames[i].ka = Vector3f(0.1, 1, 0);
 			idleFrames[i].kd = Vector3f(0.5, 0, 0);
 			idleFrames[i].ks = 8.0f;
 		}
@@ -267,6 +277,9 @@ public:
 		larmRotation = armRot;
 		rarmRotation = armRot;
 		headRotation = headRot;
+
+	
+		
 
 		Head = loadModel(projectPath + "Resources\\Models\\Android\\android_head.obj");
 		Head.ka = Vector3f(0.1, 0, 0);
@@ -337,11 +350,6 @@ public:
 			blinnPhong.addShader(FRAGMENT, projectPath + "Resources\\blinnphong.frag");
 			blinnPhong.build();
 
-			terrainShader.create();
-			terrainShader.addShader(VERTEX, projectPath + "Resources\\terrain.vert");
-			terrainShader.addShader(FRAGMENT, projectPath + "Resources\\terrain.frag");
-			terrainShader.build();
-
 			shadowShader.create();
 			shadowShader.addShader(VERTEX, projectPath + "Resources\\shadow.vert");
 			shadowShader.build();
@@ -360,7 +368,7 @@ public:
 		// colorMap and shadowMap uniforms in the shader
 		blinnPhong.bind();
 		blinnPhong.uniform1i("colorMap", 0);
-		blinnPhong.uniform1i("shadowMap", 1);
+		blinnPhong.uniform1i("depthMap", 1);
 
 		// Upload the projection matrix once, if it doesn't change
 		// during the game we don't need to reupload it
@@ -369,11 +377,6 @@ public:
 		//Same for the other shaders.
 		defaultShader.bind();
 		defaultShader.uniformMatrix4f("projMatrix", projMatrix);
-
-		terrainShader.bind();
-		terrainShader.uniform1i("colorMap", 0);
-		terrainShader.uniform1i("depthMap", 1);
-		terrainShader.uniformMatrix4f("projMatrix", projMatrix);
 
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -451,9 +454,10 @@ public:
 
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
-			//Set the height to terrain level
-			//float y = getHeight(character.position.z, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
-			//std::cout << y << std::endl;
+
+			//Set the height to terrain level (terrain collision detection)
+			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
+			character.setYPosition(y);
 
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
@@ -461,16 +465,16 @@ public:
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 				glClear(GL_DEPTH_BUFFER_BIT);
 				//render whole scene for only depthmap
-				//renderCube(shadowShader, cube_01, Vector3f(5, 1, 5), lightPosition, lightColor);
-				//renderCube(shadowShader, cube_02, Vector3f(3, 1, 1), lightPosition, lightColor);
+				renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
+				renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
 				//drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-				//drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-				//drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-				//drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-				//drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+				drawModel(shadowShader, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0), 10);
+				drawModel(shadowShader, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
+				drawModel(shadowShader, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
+				drawModel(shadowShader, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
 				
-				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0));
+				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0), lightPosition, lightColor);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -479,25 +483,24 @@ public:
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
 			blinnPhong.uniform1f("time", glfwGetTime());
-			blinnPhong.uniform3f("viewPos", viewPos);
-			//drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
-			//renderCube(blinnPhong, cube_02, Vector3f(1, 1, 3), lightPosition, lightColor);
-			//renderCube(blinnPhong, cube_01, Vector3f(3, 1, 1), lightPosition, lightColor);
-			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
-			//drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor);
-			//drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
-			//drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
-			//drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
-			//android.rotateArms(character.position);
-			//android.rotateHead();
+			blinnPhong.uniform3f("viewPos", viewPos);		
+			blinnPhong.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
 
-			terrainShader.bind();
-			terrainShader.uniformMatrix4f("viewMatrix", viewMatrix);
-			terrainShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
-			terrainShader.uniformMatrix4f("projMatrix", projMatrix);
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
-			drawSurface(terrainShader, terrain, rockyTerrain, Vector3f(0, 0, 0));
+			//drawModel(blinnPhong, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);
+			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
+			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
+			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
+			drawModel(blinnPhong, android.Body, Vector3f(0, 0, 5.0f), lightPosition, lightColor, Vector3f(0));
+			drawModel(blinnPhong, android.Head, android.headPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.headRotation);
+			drawModel(blinnPhong, android.Arm, android.larmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.larmRotation);
+			drawModel(blinnPhong, android.Arm, android.rarmPosition + Vector3f(0, 0, 5.0f), lightPosition, lightColor, android.rarmRotation);
+			android.rotateArms(character.position);
+			android.rotateHead();
+
+			
+			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
 	
 			if (showCoord) {
 				defaultShader.bind();
@@ -714,7 +717,6 @@ private:
 	ShaderProgram defaultShader;
 	ShaderProgram shadowShader;
 	ShaderProgram blinnPhong;
-	ShaderProgram terrainShader;
 
 	// Projection and view matrices for you to fill in and use
 	Matrix4f projMatrix;
