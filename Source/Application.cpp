@@ -86,7 +86,7 @@ float calculatexzRotation(Vector3f dir, Vector3f b) {
 }
 
 float calculateDistance(Vector3f a, Vector3f b) {
-	return (a - b).sqrMagnitude();
+	return sqrtf((a - b).sqrMagnitude());
 }
 
 // Produces a look-at matrix from the position of the camera (camera) facing the target position (target)
