@@ -68,6 +68,6 @@ void main() {
 	float spec = pow(max(dot(normal, halfwayDir), 0.0), passks);
 	vec4 specular = vec4((spec*passLightColor),1);
 	
-	finalColor = (ambient + (1.0 - shadow ) * (diffuse + specular)) * color;
+	finalColor = (ambient + (1.0 - shadow ) * (diffuse + specular)) * vec4(color,1);
 }
 

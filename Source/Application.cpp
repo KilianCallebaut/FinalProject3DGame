@@ -76,6 +76,7 @@ void drawModel(ShaderProgram& shader, const Model& model, Vector3f position, Vec
 	glBindVertexArray(0);
 }
 
+//Calcuate rotation around the xz axis given a direction and rotation b
 float calculatexzRotation(Vector3f dir, Vector3f b) {
 
 	Vector3f xa = dir;
@@ -84,6 +85,7 @@ float calculatexzRotation(Vector3f dir, Vector3f b) {
 	return -180 * (atan2f(1, 0) - atan2f(xb.z, xb.x)) / Math::PI;
 }
 
+//Calcuate the distance between two points.
 float calculateDistance(Vector3f a, Vector3f b) {
 	return sqrtf((a - b).sqrMagnitude());
 }
@@ -143,20 +145,13 @@ void drawCoordSystem(ShaderProgram& shader, Vector3f position, unsigned int vao)
 	glBindVertexArray(0);
 }
 
+//Boudingbox class used for collision detection.
 class BoundingBox {
 public:
-	/*
-	Vector3f ftr;
-	Vector3f flr;
-	Vector3f ftl;
-	Vector3f fll;
-	Vector3f btr;
-	Vector3f blr;
-	Vector3f btl;
-	Vector3f bll;*/
 	Vector3f vertices[8];
 	Vector3f curr_vertices[8];
 
+	//Calcuate the boundingbox of a model
 	void calculateBoundingBox(Model m) {
 
 		Vector3f xmax;
@@ -165,6 +160,7 @@ public:
 		Vector3f xmin;
 		Vector3f ymin;
 		Vector3f zmin;
+		//Get the min and max values of x, y and z
 		for (Vector3f a : m.vertices) {
 			if (a.x > xmax.x)
 				xmax = a;
@@ -173,7 +169,6 @@ public:
 			if (a.z > zmax.z)
 				zmax = a;
 			if (a.x < xmin.x)
-				//std::cout << xmin << '\n';
 				xmin = a;
 			if (a.y < ymin.y)
 				ymin = a;
@@ -194,76 +189,43 @@ public:
 		}
 	}
 
+	//Scale the bounding box
 	void scale(float s) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "scale" << vertices[i] << '\n';
 			curr_vertices[i] *= s;
-			//std::cout << vertices[i] << '\n';
-
-
 		}
 	}
 
+	//Translate the boundingbox
 	void translate(Vector3f t) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "tran" << vertices[i] << '\n';
-
 			curr_vertices[i] = curr_vertices[i] + t;
-			//std::cout << vertices[i] << '\n';
-
 		}
 	}
 
+	//Rotate the bounding box
 	void rotate(Vector3f r) {
 		for (int i = 0; i < 8; i++) {
-			//std::cout << "rot" << vertices[i] << '\n';
 			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(r.y) + curr_vertices[i].z * sinf(r.y), curr_vertices[i].y,
 				-curr_vertices[i].x * sinf(r.y) + curr_vertices[i].z * cosf(r.y));
-			//std::cout << vertices[i] << '\n';
-
 		}
-		/*
-		ftr = Vector3f(ftr.x * cosf(r.y) + ftr.z * sinf(r.y), ftr.y,
-			-ftr.x * sinf(r.y) + ftr.z * cosf(r.y));
-		flr = Vector3f(flr.x * cosf(r.y) + flr.z * sinf(r.y), flr.y,
-			-flr.x * sinf(r.y) + flr.z * cosf(r.y));
-		ftl = Vector3f(ftl.x * cosf(r.y) + ftl.z * sinf(r.y), ftl.y,
-			-ftl.x * sinf(r.y) + ftl.z * cosf(r.y));
-		fll = Vector3f(fll.x * cosf(r.y) + fll.z * sinf(r.y), fll.y,
-			-fll.x * sinf(r.y) + fll.z * cosf(r.y));
-		btr = Vector3f(btr.x * cosf(r.y) + btr.z * sinf(r.y), btr.y,
-			-btr.x * sinf(r.y) + btr.z * cosf(r.y));
-		blr = Vector3f(blr.x * cosf(r.y) + blr.z * sinf(r.y), blr.y,
-			-blr.x * sinf(r.y) + blr.z * cosf(r.y));
-		btl = Vector3f(btl.x * cosf(r.y) + btl.z * sinf(r.y), btl.y,
-			-btl.x * sinf(r.y) + btl.z * cosf(r.y));
-		bll = Vector3f(bll.x * cosf(r.y) + bll.z * sinf(r.y), bll.y,
-			-bll.x * sinf(r.y) + bll.z * cosf(r.y));
-			*/
 	}
 
+	//Update the bounding box. Inputs are scale, rotation, position.
 	void update(float s, Vector3f rot, Vector3f pos) {
 		for (int i = 0; i < 8; i++) {
 			curr_vertices[i] = vertices[i];
 
-			//std::cout << "scale" << vertices[i] << '\n';
 			curr_vertices[i] *= s;
-			//std::cout << vertices[i] << '\n';
 
-			//std::cout << "rot" << vertices[i] << '\n';
 			curr_vertices[i] = Vector3f(curr_vertices[i].x * cosf(rot.y) + curr_vertices[i].z * sinf(rot.y), curr_vertices[i].y,
 				-curr_vertices[i].x * sinf(rot.y) + curr_vertices[i].z * cosf(rot.y));
-			//std::cout << vertices[i] << '\n';
 
-			//std::cout << "tran" << vertices[i] << '\n';
 			curr_vertices[i] = curr_vertices[i] + pos;
-			//std::cout << vertices[i] << '\n';
 		}
-		//scale(s);
-		//rotate(rot);
-		//translate(pos);
 	}
 
+	//Check if the boudingbox intersects with a given point in space.
 	bool intersect(Vector3f point) {
 		float xmax = curr_vertices[0].x;
 		float ymax = curr_vertices[0].y;
@@ -285,16 +247,12 @@ public:
 			if (curr_vertices[i].z < zmin)
 				zmin = curr_vertices[i].z;
 		}
-		//std::cout << point << '\n';
-		//std::cout << xmax << '\n';
-		//std::cout << xmin << '\n';
-		//std::cout << (xmax >= point.x && point.x >= xmin) << '\n';
 
 		return xmax >= point.x && point.x >= xmin && ymax >= point.y && point.y >= ymin && zmax >= point.z && point.z >= zmin;
 	}
 };
 
-
+//Main character class
 class Character
 {
 public:
@@ -319,11 +277,12 @@ public:
 
 	std::string projectPath;
 
-	
+	//Set the y position of the character
 	void setYPosition(float y) {
 		position.y = y;
 	}
 
+	//Initialize the character
 	void initCharacter(std::string ppath, Vector3f  pos, Vector3f rot = Vector3f(0, 0, 0))
 	{
 		projectPath = ppath;
@@ -334,15 +293,19 @@ public:
 		Vector3f ka = Vector3f(1, 1, 1);
 		Vector3f kd = Vector3f(1, 1, 1);
 		float ks = 96;
+
+		std::string base = projectPath + "Resources\\Models\\Shadowman";
+		characterModel = loadModel(base + "\\Shadowman.obj");
+
+		//Create a boudingbox of the character
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(characterModel);
 		boundingBox.update(scale, rotation, position);
 
-		std::string base = projectPath + "Resources\\Models\\Shadowman";
-		characterModel = loadModel(base + "\\Shadowman.obj");
 		characterModel.ka = ka;
 		characterModel.kd = kd;
 		characterModel.ks = ks;
+		//Load all running frames
 		for (int i = 0; i < 24; i++) {
 			std::string number;
 			if (i < 9) {
@@ -358,7 +321,7 @@ public:
 			runFrames[i].kd = kd;
 			runFrames[i].ks = ks;
 		}
-
+		//Load all idle frames
 		for (int i = 0; i < 59; i++) {
 			std::string number;
 			if (i < 9) {
@@ -377,6 +340,7 @@ public:
 
 	}
 
+	//Get the next frame of the character
 	Model nextFrame()
 	{
 		boundingBox.update(scale, rotation, position);
@@ -398,6 +362,7 @@ public:
 		}
 	}
 
+	//Set the mode of the character to run.
 	void run() {
 		switch (mode) {
 		case 0:
@@ -409,22 +374,25 @@ public:
 		}
 	}
 
+	//Move to a new position based on the direction and speed.
 	void move() {
 		position += direction * speed;
 	}
 
+	//Move back based on the direcition and speed
 	void back() {
 		position -= direction * speed;
 	}
 
+	//Rotate the character
 	void rotate(int left) {
-
 		direction = Vector3f(direction.x * cosf((float)left * rotationspeed) + direction.z * sinf((float)left * rotationspeed), direction.y,
 			-direction.x * sinf((float)left * rotationspeed) + direction.z * cosf((float)left * rotationspeed));
 
 		rotation += Vector3f(0, left * rotationspeed * 180 / Math::PI, 0);
 	}
 
+	//Set the character to dead mode. GAME OVER.
 	void die() {
 		if (mode != 2) {
 			rotation += Vector3f(90, 0, 0);
@@ -433,6 +401,7 @@ public:
 	}
 };
 
+//Boss class: its an Andriod.
 class Android {
 public:
 	Model Head;
@@ -469,7 +438,7 @@ public:
 	Vector3f direction = Vector3f(0, 0, 1.0f);
 	std::string projectPath;
 
-
+	//Initialize the boss.
 	void initAndroid(std::string path, Vector3f pos, Vector3f rot = Vector3f(0, 0, 0), Vector3f armRot = Vector3f(0, 0, 0), Vector3f headRot = Vector3f(0, 0, 0)) {
 		projectPath = path;
 
@@ -481,6 +450,7 @@ public:
 		rarmRotation = armRot;
 		headRotation = headRot;
 
+		//Load the multiple components
 		Head = loadModel(projectPath + "Resources\\Models\\Android\\android_head.obj");
 		Head.ka = Vector3f(0.1, 0, 0);
 		Head.kd = Vector3f(0.5, 0, 0);
@@ -494,12 +464,14 @@ public:
 		Arm.kd = Vector3f(0.5, 0, 0);
 		Arm.ks = 8.0f;
 
+		//Initialize the bouding box.
 		boundingBox = BoundingBox();
 		boundingBox.calculateBoundingBox(Body);
 		boundingBox.update(scale, rotation, position);
 
 	}
 
+	//Update the boss. It aims/looks/shoots at a given target.
 	void updateAndroid(Vector3f target) {
 		lookTarget = target;
 		if (lookTarget != Vector3f(0)) {
@@ -515,48 +487,36 @@ public:
 		}
 	}
 
+	//Set the target of the boss.
 	void setTarget(Vector3f target) {
 		if (!shooting)
 			shotTarget = target;
 	}
 
+	//Rotate the arms of the boss.
 	void rotateArms() {
-
 		rarmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (rarmPosition))));
 		larmRotation = Vector3f(90, 0, calculatexzRotation(Vector3f(1, 0, 0), normalize(shotTarget - (larmPosition))));
-
-		//std::cout << armRotation <<'\n';
-		//armRotation += Vector3f(0.5f, 0, 0);
-		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
-		//		-direction.x*sinf() + direction.z*cosf());
-		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
-		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 
+	//Rotate the head of the boss.
 	void rotateHead() {
-
 		headRotation = Vector3f(0, -calculatexzRotation(Vector3f(1, 0, 0), normalize(lookTarget - (position + headPosition))), 0);
-		//Vector3f(direction.x*cosf() + direction.z*sinf(), direction.y,
-		//		-direction.x*sinf() + direction.z*cosf());
-		//direction = Vector3f(direction.x*cosf((float)left*rotationspeed) + direction.z*sinf((float)left*rotationspeed), direction.y,
-		//	-direction.x*sinf((float)left*rotationspeed) + direction.z*cosf((float)left*rotationspeed));
 	}
 
+	//Shoot the arms of the bot. This has a 3 seconds cooldown.
 	void shootArms() {
-
 		if (!timerS && !shooting) {
 			timer = std::chrono::system_clock::now() + std::chrono::seconds(3);
 			timerS = true;
 		}
-
 		if (timerS && std::chrono::system_clock::now() > timer) {
 			shooting = true;
 			timerS = false;
-
 		}
-
 	}
 
+	//Check if the arms reached the target location.
 	bool atTarget(bool left) {
 		if (left) {
 			return calculateDistance(shotTarget, larmPosition) < 2.0f;
@@ -564,6 +524,7 @@ public:
 		return calculateDistance(shotTarget, rarmPosition) < 2.0f;
 	}
 
+	//Check if the shots have been fired.
 	bool shotDone() {
 		if (shooting && atTarget(true) && atTarget(false) && !reTimerS) {
 			rechTimer = std::chrono::system_clock::now() + std::chrono::seconds(3);
@@ -576,6 +537,7 @@ public:
 		return false;
 	}
 
+	//Get the armposition of the boss
 	Vector3f armPosition(bool larm) {
 		if (shooting) {
 			if (larm) {
@@ -597,6 +559,7 @@ public:
 		}
 	}
 
+	//Reset the arms of the boss back to its body.
 	void resetArms() {
 		larmPosition = Vector3f(scale * 1.4f, scale * 1.5, scale * 0) + position;
 		rarmPosition = Vector3f(scale * -1.4f, scale * 1.5, scale * 0) + position;
@@ -606,6 +569,7 @@ public:
 		shooting = false;
 	}
 };
+
 class Application : KeyListener, MouseMoveListener, MouseClickListener {
 public:
 
@@ -626,21 +590,22 @@ public:
 
 		//Create shaders
 		try {
+			//Default shader. used for testing purposes.
 			defaultShader.create();
 			defaultShader.addShader(VERTEX, projectPath + "Resources\\shader.vert");
 			defaultShader.addShader(FRAGMENT, projectPath + "Resources\\shader.frag");
 			defaultShader.build();
-
+			//Blinnphong shader
 			blinnPhong.create();
 			blinnPhong.addShader(VERTEX, projectPath + "Resources\\blinnphong.vert");
 			blinnPhong.addShader(FRAGMENT, projectPath + "Resources\\blinnphong.frag");
 			blinnPhong.build();
-
+			//Toonshader
 			toonShader.create();
 			toonShader.addShader(VERTEX, projectPath + "Resources\\toon.vert");
 			toonShader.addShader(FRAGMENT, projectPath + "Resources\\toon.frag");
 			toonShader.build();
-
+			//Shadow shader for depthmap.
 			shadowShader.create();
 			shadowShader.addShader(VERTEX, projectPath + "Resources\\shadow.vert");
 			shadowShader.build();
@@ -705,6 +670,7 @@ public:
 		character = Character();
 		character.initCharacter(projectPath, Vector3f(0, 0, 0));
 
+		//Test cubes
 		cube_01 = loadCube();
 		cube_01.ka = Vector3f(0, 0.5, 0.5);
 		cube_01.kd = Vector3f(0, 0, 0.1);
@@ -744,11 +710,7 @@ public:
 			//Get viewposition
 			Matrix4f inv = inverse(viewMatrix);
 			Vector3f viewPos = Vector3f(inv[12], inv[13], inv[14]);
-			//shadow
-			//Orthographic from light point of view
-			Matrix4f lightProjectionMatrix = orthographic(nn, ff, SHADOW_WIDTH, SHADOW_HEIGHT);
-			Matrix4f lightViewMatrix = lookAtMatrix(lightPosition, Vector3f(0,0,0), Vector3f(0, 1, 0));
-			Matrix4f lightSpaceMatrix = lightProjectionMatrix * lightViewMatrix;
+			
 
 			//Get the next model of the character
 			Model charFrame = character.nextFrame();
@@ -762,16 +724,20 @@ public:
 			//Set the height to terrain level (terrain collision detection)
 			float y = getHeight(character.position.x, character.position.z, terrain.heights, terrain.size, terrain.vertexCount);
 			character.setYPosition(y);
-			
+
+			//shadow
+			//Orthographic from light point of view
+			Matrix4f lightProjectionMatrix = orthographic(nn, ff, SHADOW_WIDTH, SHADOW_HEIGHT);
+			Matrix4f lightViewMatrix = lookAtMatrix(lightPosition, Vector3f(0,0,0), Vector3f(0, 1, 0));
+			Matrix4f lightSpaceMatrix = lightProjectionMatrix * lightViewMatrix;
 			shadowShader.bind();
 			shadowShader.uniformMatrix4f("lightSpaceMatrix", lightSpaceMatrix);
+			//Set the viewport of the shadow shader
 			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 				glClear(GL_DEPTH_BUFFER_BIT);
 				glCullFace(GL_FRONT);
 				//render whole scene for only depthmap
-				//renderCube(shadowShader, cube_01, Vector3f(5, 5, 5), lightPosition, lightColor);
-				//renderCube(shadowShader, cube_02, Vector3f(8, 4, 8), lightPosition, lightColor);
 				drawModel(shadowShader, tmp, Vector3f(5, 1, 5), lightPosition, lightColor, Vector3f(0), 2.0f);			
 				drawModel(shadowShader, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
 				drawModel(shadowShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
@@ -782,9 +748,10 @@ public:
 				drawSurface(shadowShader, terrain, rockyTerrain, Vector3f(0), lightPosition, lightColor);
 				glCullFace(GL_BACK);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+			//Set the viewport back to the screen width and height
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//Render objects
 			blinnPhong.bind();
 			blinnPhong.uniformMatrix4f("viewMatrix", viewMatrix);
 			blinnPhong.uniform1f("time", glfwGetTime());
@@ -793,11 +760,11 @@ public:
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
+			//House render
 			drawModel(blinnPhong, tmp, Vector3f(50, getHeight(50,100, terrain.heights, terrain.size, terrain.vertexCount), 100), lightPosition, lightColor, Vector3f(0, 180, 0), 10.0f);
-			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
-			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, characterTexture.handle);
+			//Character and terrain render.
 			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
 			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
 
@@ -808,17 +775,18 @@ public:
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
-			 
+			 //Boss render
 			drawModel(toonShader, android.Body, android.position, lightPosition, lightColor, android.rotation, android.scale);
 			drawModel(toonShader, android.Head, android.headPosition + android.position, lightPosition, lightColor, android.headRotation, android.scale);
 			drawModel(toonShader, android.Arm, android.armPosition(true), lightPosition, lightColor, android.larmRotation, android.scale);
 			drawModel(toonShader, android.Arm, android.armPosition(false), lightPosition, lightColor, android.rarmRotation, android.scale);
-			
+			//If we want we can draw a coordsystem.
 			if (showCoord) {
 				defaultShader.bind();
 				defaultShader.uniformMatrix4f("viewMatrix", viewMatrix);
 				drawCoordSystem(defaultShader, Vector3f(0, 0, 0), coordVAO);
 			}
+			//Follow the character.
 			viewMatrix = lookAtMatrix(viewPosition + character.position, character.position, Vector3f(0, 1.0f, 0));
 
 			// Processes input and swaps the window buffer
