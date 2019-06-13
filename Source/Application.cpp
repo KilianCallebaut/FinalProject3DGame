@@ -692,6 +692,7 @@ public:
 		//Init textures
 		rockyTerrain = loadImage(projectPath + "Resources\\rockyTerrain.jpg");
 		characterTexture = loadImage(projectPath + "Resources\\Textures\\shadowman.jpg");
+		houseTexture = loadImage(projectPath + "Resources\\Textures\\House_texture.png");
 
 		//Setup coordsystem (for debugging), shadowFrameBuffer for depth map, and terrain.
 		setupCoordSystem();
@@ -699,10 +700,11 @@ public:
 		terrain = initializeTerrain();
 
 		//Init models
-		tmp = loadModel(projectPath + "Resources\\Models\\Housev2.obj");
+		tmp = loadModel(projectPath + "Resources\\77613_Simple_Character__rigged_\\Housev2.obj");
 		tmp.ka = Vector3f(0.3, 0, 0.3);
 		tmp.kd = Vector3f(0.3, 0.1, 0.6);
 		tmp.ks = 8.0f;
+		std::cout << tmp.texCoords.size();
 
 		//Init boss
 		android = Android();
@@ -802,6 +804,9 @@ public:
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
+
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, houseTexture.handle);
 			drawModel(blinnPhong, tmp, Vector3f(50, getHeight(50, 100, terrain.heights, terrain.size, terrain.vertexCount), 100), lightPosition, lightColor, Vector3f(0, 180, 0), 10.0f);
 			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
 			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
@@ -1098,6 +1103,8 @@ private:
 	//Images
 	Image rockyTerrain;
 	Image characterTexture;
+	Image houseTexture;
+
 
 	Cube cube_01;
 	Cube cube_02;
