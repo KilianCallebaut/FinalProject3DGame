@@ -1069,7 +1069,7 @@ private:
 	bool drawTestModel = 0;
 
 	std::string projectPath = "";
-	bool emielPC = 1;
+	bool emielPC = 0;
 };
 
 int main() {
