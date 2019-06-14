@@ -513,7 +513,7 @@ public:
 		if (lookTarget != Vector3f(0)) {
 			rotateArms();
 			rotateHead();
-			shootArms();
+			//shootArms();
 		}
 		if (!shooting) {
 			shotTarget = lookTarget;
@@ -805,12 +805,12 @@ public:
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
 
-			//glActiveTexture(GL_TEXTURE0);
-			//glBindTexture(GL_TEXTURE_2D, houseTexture.handle);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, houseTexture.handle);
 			drawModel(blinnPhong, tmp, Vector3f(50, getHeight(50, 100, terrain.heights, terrain.size, terrain.vertexCount), 100), lightPosition, lightColor, Vector3f(0, 180, 0), 10.0f);
 			//renderCube(blinnPhong, cube_02, Vector3f(5, 5, 5), lightPosition, lightColor);
 			//renderCube(blinnPhong, cube_01, Vector3f(8, 4, 8), lightPosition, lightColor);
-			glActiveTexture(GL_TEXTURE0);
+			//glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, characterTexture.handle);
 			drawModel(blinnPhong, charFrame, character.position, lightPosition, lightColor, character.rotation, character.scale);
 			drawSurface(blinnPhong, terrain, rockyTerrain, Vector3f(0, 0, 0), lightPosition, lightColor);
@@ -1090,7 +1090,7 @@ private:
 
 	float nn = 0.1f;
 	float ff = 1000.0f;
-	float step = 0.01f;
+	float step = 2.0f;
 	float cam_rot_sp = 2.0;
 
 	//shadow
